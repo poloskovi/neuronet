@@ -1,15 +1,27 @@
-struct Massiv<T>{
+
+/// Массив произвольного типа размером 10
+/// # Examples
+///
+/// ```
+/// let mut m = Massiv::new(0);
+/// m.set(2, 5);
+/// m.prt();
+/// ```
+pub struct Massiv<T>{
     m: [T; 10],
 }
 
 impl Massiv<i16> {
-    fn new(x: i16) -> Massiv<i16> {
+    /// Инициализация массива и заполнение всех элементов заданным значением
+    pub fn new(x: i16) -> Massiv<i16> {
         Massiv {m: [x; 10]}
     }
-    fn set(&mut self, i:usize, x: i16) {
+    /// Установка значения x в ячейку (i)
+    pub fn set(&mut self, i:usize, x: i16) {
         self.m[i] = x;
     }
-    fn prt(&self) {
+    /// Вывод матрицы на экран
+    pub fn prt(&self) {
         for x in &self.m{
             print!("{} ", x);
         }
@@ -54,7 +66,7 @@ impl Matrix<i16>{
     }
 }
 
-/// Ф
+/// Функция, просто возвращающая переданное значение
 fn foo(x: i32) -> i32 {x}
 
 
