@@ -39,21 +39,22 @@ pub struct Matrix<T>{
 
 impl Matrix<i16>{
     /// Инициализация матрицы и заполнение всех элементов заданным значением
-    fn new(x: i16) -> Matrix<i16> {
+    pub fn new(x: i16) -> Matrix<i16> {
         Matrix {m: [Massiv::new(x);10] }
     }
     /// Установка значения x в ячейку (i,j)
-    fn set(&mut self, i:usize, j:usize, x: i16) {
+    pub fn set(&mut self, i:usize, j:usize, x: i16) {
         self.m[j].set(i, x);
     }
     /// Вывод матрицы на экран
-    fn prt(&self) {
+    pub fn prt(&self) {
         for x in &self.m{
             x.prt();
         }
     }
 }
 
+/// Ф
 fn foo(x: i32) -> i32 {x}
 
 
