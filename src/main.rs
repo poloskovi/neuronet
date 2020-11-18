@@ -17,10 +17,20 @@ impl Massiv<i16> {
         Massiv {m: [x; 10]}
     }
     /// Установка значения x в ячейку (i)
+    /// # Examples
+    ///
+    /// ```
+    /// m.set(2, 5);
+    /// ```
     pub fn set(&mut self, i:usize, x: i16) {
         self.m[i] = x;
     }
     /// Вывод матрицы на экран
+    /// # Examples
+    ///
+    /// ```
+    /// m.prt();
+    /// ```
     pub fn prt(&self) {
         for x in &self.m{
             print!("{} ", x);
