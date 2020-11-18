@@ -79,6 +79,7 @@ impl Matrix<i16>{
 /// Функция, просто возвращающая переданное значение
 pub fn foo(x: i32) -> i32 {x}
 
+pub fn foo2(x: i16) - i16 {x+x}
 
 fn main() {
 
@@ -87,7 +88,9 @@ fn main() {
     m.prt();
     
     let x: fn(i32)->i32 = foo;
-    
     println!("{}", x(4));
+    
+    let y: fn(i16)->i16 = foo2;
+    println!("{}", x(5));
     
 }
