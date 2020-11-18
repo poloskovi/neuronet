@@ -84,6 +84,7 @@ fn main() {
 
     let mut m = Matrix::new(1);
     m.set(2, 3, 5);
+    m.set(3, 3, 6);
     m.prt();
     
     let x: fn(i32)->i32 = foo;
