@@ -1,5 +1,5 @@
 
-/// Массив произвольного типа размером 10
+/// Массив типа i16 размером 10
 /// # Examples
 ///
 /// ```
@@ -7,13 +7,14 @@
 /// m.set(2, 5);
 /// m.prt();
 /// ```
-pub struct Massiv<T>{
-    m: [T; 10],
+#[derive(Clone, Copy)]
+pub struct Massiv{
+    m: [i16; 10],
 }
 
-impl Massiv<i16> {
+impl Massiv {
     /// Инициализация массива и заполнение всех элементов заданным значением
-    pub fn new(x: i16) -> Massiv<i16> {
+    pub fn new(x: i16) -> Massiv {
         Massiv {m: [x; 10]}
     }
     /// Установка значения x в ячейку (i)
@@ -39,15 +40,7 @@ impl Massiv<i16> {
     }
 }
 
-impl Copy for Massiv<i16> { }
-
-impl Clone for Massiv<i16> {
-    fn clone(&self) -> Massiv<i16> {
-        *self
-    }
-}
-
-/// Матрица произвольного типа размером 10x10
+/// Матрица типа i16 размером 10x10
 /// # Examples
 ///
 /// ```
@@ -55,13 +48,13 @@ impl Clone for Massiv<i16> {
 /// m.set(2, 3, 5);
 /// m.prt();
 /// ```
-pub struct Matrix<T>{
-    m: [Massiv<T>; 10]
+pub struct Matrix{
+    m: [Massiv; 10]
 }
 
-impl Matrix<i16>{
+impl Matrix{
     /// Инициализация матрицы и заполнение всех элементов заданным значением
-    pub fn new(x: i16) -> Matrix<i16> {
+    pub fn new(x: i16) -> Matrix {
         Matrix {m: [Massiv::new(x);10] }
     }
     /// Установка значения x в ячейку (i,j)
@@ -76,23 +69,11 @@ impl Matrix<i16>{
     }
 }
 
-/// Функция, просто возвращающая переданное значение
-pub fn foo(x: i32) -> i32 {x}
-
-/// Функция, просто возвращающая удвоенное переданное значение
-pub fn foo2(x: i16) -> i16 {x+x}
-
 fn main() {
 
     let mut m = Matrix::new(1);
     m.set(2, 3, 5);
     m.set(3, 3, 6);
     m.prt();
-    
-    let x: fn(i32)->i32 = foo;
-    println!("{}", x(4));
-    
-    let y: fn(i16)->i16 = foo2;
-    println!("{}", y(5));
     
 }
