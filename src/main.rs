@@ -1,67 +1,5 @@
-use std::ops::Add;
-use std::ops::Mul;
 
-const N:usize = 3;
-
-/// Массив типа i16 размером N
-/// # Examples
-///
-/// ```
-/// let mut m = Massiv::new(0);
-/// m.set(2, 5);
-/// m.prt();
-/// ```
-#[derive(Clone, Copy)]
-pub struct Massiv{
-    m: [i16; N],
-}
-
-impl Massiv {
-    /// Инициализация массива и заполнение всех элементов заданным значением
-    pub fn new(x: i16) -> Massiv {
-        Massiv {m: [x; N]}
-    }
-    pub fn get(&self, i:usize) -> i16 {
-        self.m[i]
-    }
-    /// Установка значения x в ячейку (i)
-    /// # Examples
-    ///
-    /// ```
-    /// m.set(2, 5);
-    /// ```
-    pub fn set(&mut self, i:usize, x: i16) {
-        self.m[i] = x;
-    }
-    /// Вывод матрицы на экран
-    /// # Examples
-    ///
-    /// ```
-    /// m.prt();
-    /// ```
-    pub fn print(&self) {
-        for x in &self.m{
-            print!("{} ", x);
-        }
-        println!();
-    }
-}
-
-impl Add for Massiv {
-    type Output = Massiv;
-
-    fn add(self, other: Massiv) -> Massiv{
-        let mut result = Massiv::new(0);
-        for i in 0..N {
-            let ai = self.get(i);
-            let bi = other.get(i);
-            result.set(i, ai+bi);
-        }
-        result
-    }
-}
-
-/// Матрица типа i16 размером NxN
+/// Матрица типа i16 произвольного размера
 /// # Examples
 ///
 /// ```
@@ -69,106 +7,89 @@ impl Add for Massiv {
 /// m.set(2, 3, 5);
 /// m.prt();
 /// ```
-#[derive(Clone, Copy)]
+// #[derive(Clone, Copy)]
 pub struct Matrix{
-    m: [Massiv; N]
+    m: Vec<i16>,
+    nrow: usize,
+    ncol: usize,
+}
+
+fn min(v1:usize, v2:usize)->usize{
+    if v1>v2 {v2}else{v1}
 }
 
 impl Matrix{
     /// Инициализация матрицы и заполнение всех элементов заданным значением
-    pub fn new(x: i16) -> Matrix {
-        Matrix {m: [Massiv::new(x);N] }
+    pub fn new(nrow: usize, ncol: usize, x: i16) -> Matrix {
+        Matrix {
+            m: vec![x; ncol*nrow],
+            nrow: nrow,
+            ncol: ncol,
+        }
     }
-    pub fn new_ed() -> Matrix {
-        let mut result = Matrix::new(0);
-        for i in 0..N{
+    pub fn new_ed(nrow: usize, ncol: usize) -> Matrix {
+        let mut result = Matrix::new(ncol, nrow, 0);
+        for i in 0..min(nrow, ncol){
             result.set(i,i,1);
         }
         result
     }
     pub fn get(&self, i:usize, j:usize) -> i16 {
-        self.m[i].get(j)
+        let index = i * self.ncol + j;
+        self.m[index]
     }
     /// Установка значения x в ячейку (i,j)
     pub fn set(&mut self, i:usize, j:usize, x: i16) {
-        self.m[i].set(j, x);
-    }
-    pub fn get2(&self, i:usize) -> Massiv {
-        self.m[i]
-    }
-    pub fn set2(&mut self, i:usize, x: Massiv) {
-        self.m[i] = x;
+        let index = i * self.ncol + j;
+        self.m[index] = x;
     }
     /// Вывод матрицы на экран
     pub fn print(&self) {
-        for x in &self.m{
-            x.print();
-        }
-    }
-}
-
-impl Add for Matrix {
-    type Output = Matrix;
-
-    fn add(self, other: Matrix) -> Matrix{
-        let mut result = Matrix::new(0);
-        for j in 0..N {
-            result.set2(j, self.get2(j)+other.get2(j));
-        }
-        result
-    }
-}
-
-impl Mul for Matrix{
-    type Output = Matrix;
-
-    fn mul(self, other: Matrix) -> Matrix{
-        let mut result = Matrix::new(0);
-        for i in 0..N {
-            for j in 0..N {
-                let mut cij = 0;
-                for r in 0..N {
-                    let air = self.get(i,r);
-                    let brj = other.get(r,j);
-                    cij = cij + air*brj;
-                }
-                result.set(i,j,cij);
+        for i in 0..self.nrow{
+            for j in 0..self.ncol{
+                print!("{} ", self.get(i,j));
             }
+            println!();
         }
-        result
     }
-    
-//     fn mul2(self, other: Massiv) -> Matrix{
-//         let mut result = Matrix::new(0);
-//         for i in 0..N {
-//             for j in 0..0 {
-//                 let mut cij = 0;
-//                 for r in 0..N {
-//                     let air = self.get(i,r);
-//                     let brj = other.get(r);
-//                     cij = cij + air*brj;
-//                 }
-//                 result.set(i,j,cij);
-//             }
-//         }
-//         result
+}
+
+fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
+//     if m1.ncol <> m2.nrow{
+//         panic!("Размерности матриц не совпадают");
 //     }
+    assert_eq!(m1.ncol, m2.nrow);
+    let mut result = Matrix::new(m1.nrow, m2.ncol, 0);
+    for i in 0..m1.nrow {
+        for j in 0..m2.ncol {
+            let mut cij = 0;
+            for r in 0..m1.ncol {
+                let air = m1.get(i,r);
+                let brj = m2.get(r,j);
+                cij = cij + air*brj;
+            }
+            result.set(i,j,cij);
+        }
+    }
+    result
 }
 
 fn main() {
-
-    let mut m = Matrix::new(1);
-    m.set(1, 2, 5);
-    m.set(2, 2, 6);
     
-    let mut ed = Matrix::new_ed();
-    ed.set(0,1,1);
+    let mut a = Matrix::new_ed(3, 3);
+    let mut b = Matrix::new_ed(3, 3);
     
-    let k = ed*m;
+    a.set(0, 0, 5);
+    a.set(0, 1, 6);
     
-    ed.print();
+    b.set(1, 2, 5);
+    b.set(2, 2, 6);
+    
+    a.print();
     println!("X");
-    m.print();
+    b.print();
     println!("=");
-    k.print();
+    let c = matrix_mult(&a, &b);
+    c.print();
+    
 }
