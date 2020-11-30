@@ -55,10 +55,10 @@ impl Matrix{
 }
 
 fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
-//     if m1.ncol <> m2.nrow{
-//         panic!("Размерности матриц не совпадают");
-//     }
-    assert_eq!(m1.ncol, m2.nrow);
+    if m1.ncol != m2.nrow{
+        panic!("Размерности матриц не совпадают");
+    }
+//     assert_eq!(m1.ncol, m2.nrow);
     let mut result = Matrix::new(m1.nrow, m2.ncol, 0);
     for i in 0..m1.nrow {
         for j in 0..m2.ncol {
@@ -72,6 +72,47 @@ fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
         }
     }
     result
+}
+
+/// Структура для хранения заранее вычисленной сигмоиды
+pub struct Sigmoida{
+    index_zero: f32,
+    koeff_y: f32,
+    koeff_x: f32,
+    m:[u16; 100]
+}
+
+impl Sigmoida{
+    pub fn new() -> Sigmoida{
+        let mut result = Sigmoida{
+            index_zero: 50.0,
+            koeff_y: 65000.0,
+            koeff_x: 5.0,
+            m:[0; 100],
+        };
+        for i in 0..result.m.len(){
+            result.m[i] = result.getinitsigmoida(i);
+        }
+        result
+    }
+    fn getinitsigmoida(&self, i:usize) -> u16{
+        let x: f32 = ((i as f32) - self.index_zero) / self.koeff_x;
+        let exp = (-x).exp();
+        let y = 1.0/ (1.0 + exp);
+        (y * self.koeff_y) as u16
+    }
+    pub fn get(&self, x:f32) -> f32{
+        let index_f: f32 = (x * self.koeff_x) + self.index_zero;
+        let index: usize = if index_f < 0.0 {
+            0
+        } else if index_f > (self.m.len()-1) as f32{
+            self.m.len()-1
+        } else {
+            index_f as usize
+        };
+        self.m[index] as f32 / self.koeff_y
+    }
+
 }
 
 fn main() {
@@ -92,4 +133,11 @@ fn main() {
     let c = matrix_mult(&a, &b);
     c.print();
     
+    let sigmoida = Sigmoida::new();
+//     for i in 0..sigmoida.m.len() {
+//         println!("{}", sigmoida.m[i]);
+//     }
+    for i in -5..6 {
+        println!("{}: {}", i, sigmoida.get(i as f32));
+    }
 }
