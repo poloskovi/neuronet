@@ -1,3 +1,8 @@
+// На выходе узла сети сигнал в целых числах (+/-), Uвых(i)
+// Выходной сигнал умножается на значение матрицы: Uвых(i) * A(i,j)
+// Входным сигналом следующего слоя является сигмоида сумм выходных сигналов предыдущего слоя, умноженных на матрицу значений:
+// sigm(СУММ(Uвых(i) * A(i,j)))
+// Это значение выходного сигнала ячейки
 
 /// Матрица типа i16 произвольного размера
 /// # Examples
@@ -74,44 +79,62 @@ fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
     result
 }
 
-/// Структура для хранения заранее вычисленной сигмоиды
+// Структура для хранения заранее вычисленной сигмоиды.
+// Значение сигмоиды = 0..2^8
+// Сигмоида умножается на коэффициенты матрицы, их значения -2^7..+2^7
+// Результат -2^15..+2^15
+// Это число надо привести к 0..255
 pub struct Sigmoida{
-    index_zero: f32,
+    index_zero: i32,
     koeff_y: f32,
     koeff_x: f32,
-    m:[u16; 100]
+    len: i32,
+    m:[u8; 256],
 }
 
 impl Sigmoida{
     pub fn new() -> Sigmoida{
         let mut result = Sigmoida{
-            index_zero: 50.0,
-            koeff_y: 65000.0,
-            koeff_x: 5.0,
-            m:[0; 100],
+            index_zero: 127,
+            koeff_y: 256.0,
+            koeff_x: 22.0,
+            len: 256,
+            m:[0; 256],
         };
+        let index_zero_real = result.index_zero as f32;
         for i in 0..result.m.len(){
-            result.m[i] = result.getinitsigmoida(i);
+            result.m[i] = result.getinitsigmoida(i, index_zero_real);
         }
         result
     }
-    fn getinitsigmoida(&self, i:usize) -> u16{
-        let x: f32 = ((i as f32) - self.index_zero) / self.koeff_x;
+    fn getinitsigmoida(&self, i:usize, index_zero_real: f32) -> u8{
+        let x: f32 = (i as f32 - index_zero_real) / self.koeff_x;
         let exp = (-x).exp();
         let y = 1.0/ (1.0 + exp);
-        (y * self.koeff_y) as u16
+        (y * self.koeff_y) as u8
     }
-    pub fn get(&self, x:f32) -> f32{
-        let index_f: f32 = (x * self.koeff_x) + self.index_zero;
-        let index: usize = if index_f < 0.0 {
-            0
-        } else if index_f > (self.m.len()-1) as f32{
-            self.m.len()-1
-        } else {
-            index_f as usize
+    pub fn get(&self, x:i32) -> u8{
+        // x - входной сигнал. Он может быть положительным и отрицательным.
+        // его нужно привести к index - индексу элемента массива значений сигмоиды
+        let mut index = x + self.index_zero;
+        if index < 0 {
+            index = 0
+        }else if x >= self.len {
+            index = self.len-1
         };
-        self.m[index] as f32 / self.koeff_y
+        self.m[index as usize]
     }
+//     // получение индекса массива по величине входного сигнала
+//     fn get_index(&self, x:i32) -> usize{
+//         let index_real = x * self.koeff_x_real + self.index_zero_real;
+//         if index_real < 0.0 {
+//             0
+//         } else if index_real > (self.m.len()-1) as f32{
+//             self.m.len()-1
+//         } else {
+//             index_real as usize
+//         }
+//     }
 
 }
 
@@ -137,7 +160,10 @@ fn main() {
 //     for i in 0..sigmoida.m.len() {
 //         println!("{}", sigmoida.m[i]);
 //     }
-    for i in -5..6 {
-        println!("{}: {}", i, sigmoida.get(i as f32));
+    for i in -127..128 {
+        println!("{}: {}", i, sigmoida.get(i as i32));
     }
+    println!("");
+    println!("{}: {}", -1000, sigmoida.get(-1000 as i32));
+    println!("{}: {}", 1000, sigmoida.get(1000 as i32));
 }
