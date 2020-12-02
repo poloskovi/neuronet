@@ -4,6 +4,9 @@
 // sigm(СУММ(Uвых(i) * A(i,j)))
 // Это значение выходного сигнала ячейки
 
+extern crate rand;
+use rand::Rng;
+
 /// Матрица типа i16 произвольного размера
 /// # Examples
 ///
@@ -32,10 +35,27 @@ impl Matrix{
             ncol: ncol,
         }
     }
+    //единичная матрица
     pub fn new_ed(nrow: usize, ncol: usize) -> Matrix {
         let mut result = Matrix::new(ncol, nrow, 0);
         for i in 0..min(nrow, ncol){
             result.set(i,i,1);
+        }
+        result
+    }
+    //матрица случайных чисел от xmin до xmax
+    pub fn new_rand(nrow: usize, ncol: usize, xmin: i16, xmax: i16, nonzero: bool) -> Matrix {
+        let mut result = Matrix::new(ncol, nrow, 0);
+        
+        let mut rng = rand::thread_rng();
+
+        for i in 0..result.m.len(){
+
+            let mut x = rng.gen_range(xmin, xmax);
+            if nonzero && x == 0 {
+                x = 1;
+            }
+            result.m[i] = x;
         }
         result
     }
@@ -79,7 +99,7 @@ fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
     result
 }
 
-// Структура для хранения заранее вычисленной сигмоиды.
+// Данные заранее вычисленной сигмоиды.
 // Значение сигмоиды = 0..2^8
 // Сигмоида умножается на коэффициенты матрицы, их значения -2^7..+2^7
 // Результат -2^15..+2^15
@@ -124,46 +144,58 @@ impl Sigmoida{
         };
         self.m[index as usize]
     }
-//     // получение индекса массива по величине входного сигнала
-//     fn get_index(&self, x:i32) -> usize{
-//         let index_real = x * self.koeff_x_real + self.index_zero_real;
-//         if index_real < 0.0 {
-//             0
-//         } else if index_real > (self.m.len()-1) as f32{
-//             self.m.len()-1
-//         } else {
-//             index_real as usize
-//         }
-//     }
+}
 
+// Нейросеть.
+// слои: входной, скрытый, выходной
+pub struct Neuronet{
+    nnodes0: usize,
+    nnodes1: usize,
+    nnodes2: usize,
+    net_01: Matrix,
+    net_12: Matrix,
+}
+
+impl Neuronet{
+    pub fn new(nnodes0: usize, nnodes1: usize, nnodes2: usize) -> Neuronet{
+        let mut neuronet = Neuronet{
+            nnodes0: nnodes0,
+            nnodes1: nnodes1,
+            nnodes2: nnodes2,
+            net_01: Matrix::new_rand(nnodes0, nnodes1, -10, 10, true),
+            net_12: Matrix::new_rand(nnodes1, nnodes2, -10, 10, true),
+        };
+        neuronet
+    }
+    pub fn training(&self){
+    }
 }
 
 fn main() {
     
-    let mut a = Matrix::new_ed(3, 3);
-    let mut b = Matrix::new_ed(3, 3);
-    
-    a.set(0, 0, 5);
-    a.set(0, 1, 6);
-    
-    b.set(1, 2, 5);
-    b.set(2, 2, 6);
-    
-    a.print();
-    println!("X");
-    b.print();
-    println!("=");
-    let c = matrix_mult(&a, &b);
-    c.print();
+//     let mut a = Matrix::new_ed(3, 3);
+//     let mut b = Matrix::new_ed(3, 3);
+//     
+//     a.set(0, 0, 5);
+//     a.set(0, 1, 6);
+//     
+//     b.set(1, 2, 5);
+//     b.set(2, 2, 6);
+//     
+//     a.print();
+//     println!("X");
+//     b.print();
+//     println!("=");
+//     let c = matrix_mult(&a, &b);
+//     c.print();
     
     let sigmoida = Sigmoida::new();
-//     for i in 0..sigmoida.m.len() {
-//         println!("{}", sigmoida.m[i]);
+//     for i in -127..128 {
+//         println!("{}: {}", i, sigmoida.get(i as i32));
 //     }
-    for i in -127..128 {
-        println!("{}: {}", i, sigmoida.get(i as i32));
-    }
+    
+    let neuronet = Neuronet::new(2,6,3);
+    neuronet.net_01.print();
     println!("");
-    println!("{}: {}", -1000, sigmoida.get(-1000 as i32));
-    println!("{}: {}", 1000, sigmoida.get(1000 as i32));
+    neuronet.net_12.print();
 }
