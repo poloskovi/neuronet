@@ -6,6 +6,7 @@
 
 extern crate rand;
 use rand::Rng;
+type Tdata = i32;
 
 /// Матрица типа i16 произвольного размера
 /// # Examples
@@ -17,7 +18,7 @@ use rand::Rng;
 /// ```
 // #[derive(Clone, Copy)]
 pub struct Matrix{
-    m: Vec<i16>,
+    m: Vec<Tdata>,
     nrow: usize,
     ncol: usize,
 }
@@ -28,7 +29,7 @@ fn min(v1:usize, v2:usize)->usize{
 
 impl Matrix{
     /// Инициализация матрицы и заполнение всех элементов заданным значением
-    pub fn new(nrow: usize, ncol: usize, x: i16) -> Matrix {
+    pub fn new(nrow: usize, ncol: usize, x: Tdata) -> Matrix {
         Matrix {
             m: vec![x; ncol*nrow],
             nrow: nrow,
@@ -44,7 +45,7 @@ impl Matrix{
         result
     }
     //матрица случайных чисел от xmin до xmax
-    pub fn new_rand(nrow: usize, ncol: usize, xmin: i16, xmax: i16, nonzero: bool) -> Matrix {
+    pub fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> Matrix {
         let mut result = Matrix::new(ncol, nrow, 0);
         
         let mut rng = rand::thread_rng();
@@ -59,12 +60,12 @@ impl Matrix{
         }
         result
     }
-    pub fn get(&self, i:usize, j:usize) -> i16 {
+    pub fn get(&self, i:usize, j:usize) -> Tdata {
         let index = i * self.ncol + j;
         self.m[index]
     }
     /// Установка значения x в ячейку (i,j)
-    pub fn set(&mut self, i:usize, j:usize, x: i16) {
+    pub fn set(&mut self, i:usize, j:usize, x: Tdata) {
         let index = i * self.ncol + j;
         self.m[index] = x;
     }
@@ -81,7 +82,7 @@ impl Matrix{
 
 fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
     if m1.ncol != m2.nrow{
-        panic!("Размерности матриц не совпадают");
+        panic!("Размерности матриц не совпадают {} != {}", m1.ncol, m2.nrow);
     }
 //     assert_eq!(m1.ncol, m2.nrow);
     let mut result = Matrix::new(m1.nrow, m2.ncol, 0);
@@ -99,16 +100,22 @@ fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
     result
 }
 
+// fn div_matrix_elements(m1: &mut Matrix, divby: i16){
+//     for x in 0..m1.m{
+//         x = x / divby
+//     }
+// }
+
 // Данные заранее вычисленной сигмоиды.
 // Значение сигмоиды = 0..2^8
 // Сигмоида умножается на коэффициенты матрицы, их значения -2^7..+2^7
 // Результат -2^15..+2^15
 // Это число надо привести к 0..255
 pub struct Sigmoida{
-    index_zero: i32,
+    index_zero: Tdata,
     koeff_y: f32,
     koeff_x: f32,
-    len: i32,
+    len: Tdata,
     m:[u8; 256],
 }
 
@@ -133,7 +140,7 @@ impl Sigmoida{
         let y = 1.0/ (1.0 + exp);
         (y * self.koeff_y) as u8
     }
-    pub fn get(&self, x:i32) -> u8{
+    pub fn get(&self, x:Tdata) -> u8{
         // x - входной сигнал. Он может быть положительным и отрицательным.
         // его нужно привести к index - индексу элемента массива значений сигмоиды
         let mut index = x + self.index_zero;
@@ -144,28 +151,55 @@ impl Sigmoida{
         };
         self.m[index as usize]
     }
+    pub fn f(&self, input: &Matrix) -> Matrix{
+        let mut output = Matrix::new(input.nrow, input.ncol, 0);
+        for i in 0..input.m.len(){
+            output.m[i] = self.get(input.m[i]/256) as Tdata// - 127
+        }
+        output
+    }
 }
 
 // Нейросеть.
 // слои: входной, скрытый, выходной
+// net_01: веса связи входной-скрытый
+// net_12: веса связи скрытый-Выходной
 pub struct Neuronet{
-    nnodes0: usize,
-    nnodes1: usize,
-    nnodes2: usize,
+//     nnodes0: usize,
+//     nnodes1: usize,
+//     nnodes2: usize,
     net_01: Matrix,
     net_12: Matrix,
 }
 
 impl Neuronet{
     pub fn new(nnodes0: usize, nnodes1: usize, nnodes2: usize) -> Neuronet{
-        let mut neuronet = Neuronet{
-            nnodes0: nnodes0,
-            nnodes1: nnodes1,
-            nnodes2: nnodes2,
-            net_01: Matrix::new_rand(nnodes0, nnodes1, -10, 10, true),
-            net_12: Matrix::new_rand(nnodes1, nnodes2, -10, 10, true),
+        let neuronet = Neuronet{
+//             nnodes0: nnodes0,
+//             nnodes1: nnodes1,
+//             nnodes2: nnodes2,
+            net_01: Matrix::new_rand(nnodes1, nnodes0, -127, 127, true),
+            net_12: Matrix::new_rand(nnodes2, nnodes1, -127, 127, true),
         };
         neuronet
+    }
+    pub fn getoutput(&self, input: &Matrix, sigmoida: &Sigmoida) -> Matrix {
+        println!("вход нейросети:");
+        input.print();
+        let nodes1_input = matrix_mult(input, &self.net_01);
+        println!("вход скрытого слоя:");
+        nodes1_input.print();
+        //div_matrix_elements(nodes1_input, 256);
+        let nodes1_output = sigmoida.f(&nodes1_input); 
+        println!("выход скрытого слоя:");
+        nodes1_output.print();
+        let nodes2_input = matrix_mult(&nodes1_output, &self.net_12);
+        println!("вход последнего слоя:");
+        nodes2_input.print();
+        let nodes2_output = sigmoida.f(&nodes2_input); 
+        println!("выход нейросети:");
+        nodes2_output.print();
+        nodes2_output
     }
     pub fn training(&self){
     }
@@ -173,29 +207,37 @@ impl Neuronet{
 
 fn main() {
     
-//     let mut a = Matrix::new_ed(3, 3);
-//     let mut b = Matrix::new_ed(3, 3);
-//     
-//     a.set(0, 0, 5);
-//     a.set(0, 1, 6);
-//     
-//     b.set(1, 2, 5);
-//     b.set(2, 2, 6);
-//     
-//     a.print();
-//     println!("X");
-//     b.print();
-//     println!("=");
-//     let c = matrix_mult(&a, &b);
-//     c.print();
-    
     let sigmoida = Sigmoida::new();
-//     for i in -127..128 {
-//         println!("{}: {}", i, sigmoida.get(i as i32));
-//     }
     
     let neuronet = Neuronet::new(2,6,3);
+    println!("net_01:");
     neuronet.net_01.print();
-    println!("");
+    println!("net_12:");
     neuronet.net_12.print();
+    println!("-----------");
+    
+    let mut inputdata_1 = Matrix::new(1,2,0);
+//     let mut inputdata_2 = Matrix::new(1,2,0);
+//     let mut inputdata_3 = Matrix::new(1,2,0);
+    
+    inputdata_1.set(0,0,255);
+    inputdata_1.set(0,1,0);
+    
+//     inputdata_2.set(0,0,0);
+//     inputdata_2.set(0,1,255);
+// 
+//     inputdata_3.set(0,0,255);
+//     inputdata_3.set(0,1,255);
+    
+    let _outputdata_1 = neuronet.getoutput(&inputdata_1, &sigmoida);
+//     let outputdata_2 = neuronet.getoutput(&inputdata_2);
+//     let outputdata_3 = neuronet.getoutput(&inputdata_3);
+    
+//     println!("---------1---------");
+//     outputdata_1.print();
+//     println!("---------2---------");
+//     outputdata_2.print();
+//     println!("---------3---------");
+//     outputdata_3.print();
+    
 }
