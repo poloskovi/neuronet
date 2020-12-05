@@ -7,6 +7,7 @@
 extern crate rand;
 use rand::Rng;
 type Tdata = i32;
+const FORMFACTOR: i32 = 256;
 
 /// Матрица типа i16 произвольного размера
 /// # Examples
@@ -28,64 +29,84 @@ fn min(v1:usize, v2:usize)->usize{
 }
 
 impl Matrix{
-    /// Инициализация матрицы и заполнение всех элементов заданным значением
-    pub fn new(nrow: usize, ncol: usize, x: Tdata) -> Matrix {
+    
+    /// Конструктор: Инициализация матрицы и заполнение всех элементов нулем
+    pub fn new(nrow: usize, ncol: usize) -> Matrix {
         Matrix {
-            m: vec![x; ncol*nrow],
+            m: vec![0; ncol*nrow],
             nrow: nrow,
             ncol: ncol,
         }
     }
-    //единичная матрица
+    
+    /// Конструктор: Единичная матрица
     pub fn new_ed(nrow: usize, ncol: usize) -> Matrix {
-        let mut result = Matrix::new(ncol, nrow, 0);
+        let mut result = Matrix::new(ncol, nrow);
         for i in 0..min(nrow, ncol){
             result.set(i,i,1);
         }
         result
     }
-    //матрица случайных чисел от xmin до xmax
+    
+    /// Конструктор: Матрица случайных чисел от xmin до xmax
     pub fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> Matrix {
-        let mut result = Matrix::new(ncol, nrow, 0);
+        let mut result = Matrix::new(nrow, ncol);
         
         let mut rng = rand::thread_rng();
 
-        for i in 0..result.m.len(){
+        for index in 0..result.m.len(){
 
             let mut x = rng.gen_range(xmin, xmax);
             if nonzero && x == 0 {
                 x = 1;
             }
-            result.m[i] = x;
+            result.m[index] = x;
         }
         result
     }
-    pub fn get(&self, i:usize, j:usize) -> Tdata {
-        let index = i * self.ncol + j;
+    
+    // Возвращает значение в ячейке
+    pub fn get(&self, row:usize, col:usize) -> Tdata {
+        let index = row * self.ncol + col;
         self.m[index]
     }
-    /// Установка значения x в ячейку (i,j)
-    pub fn set(&mut self, i:usize, j:usize, x: Tdata) {
-        let index = i * self.ncol + j;
+    
+    /// Устанавливает значение x в ячейку (i,j)
+    pub fn set(&mut self, row:usize, col:usize, x: Tdata) {
+        let index = row * self.ncol + col;
         self.m[index] = x;
     }
-    /// Вывод матрицы на экран
+    
+    /// Выводит матрицу на экран
     pub fn print(&self) {
-        for i in 0..self.nrow{
-            for j in 0..self.ncol{
-                print!("{} ", self.get(i,j));
+        for row in 0..self.nrow{
+            for col in 0..self.ncol{
+                print!("{} ", self.get(row,col));
             }
             println!();
         }
     }
+    
+    /// Возвращает транспонированную матрицу
+    pub fn t(&self) -> Matrix{
+        let mut result = Matrix::new(self.ncol, self.nrow);
+        for row in 0..self.nrow {
+            for col in 0..self.ncol {
+                result.set(col,row, self.get(row,col));
+            }
+        }
+        result
+    }
 }
 
-fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
+// Умножение матриц
+fn matrix_mul(m1: &Matrix, m2: &Matrix) -> Matrix{
+    
     if m1.ncol != m2.nrow{
         panic!("Размерности матриц не совпадают {} != {}", m1.ncol, m2.nrow);
     }
-//     assert_eq!(m1.ncol, m2.nrow);
-    let mut result = Matrix::new(m1.nrow, m2.ncol, 0);
+    
+    let mut result = Matrix::new(m1.nrow, m2.ncol);
     for i in 0..m1.nrow {
         for j in 0..m2.ncol {
             let mut cij = 0;
@@ -94,17 +115,25 @@ fn matrix_mult(m1: &Matrix, m2: &Matrix) -> Matrix{
                 let brj = m2.get(r,j);
                 cij = cij + air*brj;
             }
-            result.set(i,j,cij);
+            result.set(i,j,cij / FORMFACTOR);
         }
     }
     result
 }
 
-// fn div_matrix_elements(m1: &mut Matrix, divby: i16){
-//     for x in 0..m1.m{
-//         x = x / divby
-//     }
-// }
+// Вычитание матриц
+fn matrix_sub(m1: &Matrix, m2: &Matrix) -> Matrix{
+    
+    if (m1.nrow != m2.nrow) || (m1.ncol != m2.ncol){
+        panic!("Размерности матриц не совпадают {}x{} != {}x{}", m1.nrow,m1.ncol, m2.nrow,m2.ncol);
+    }
+    
+    let mut result = Matrix::new(m1.nrow, m2.ncol);
+    for index in 0..result.m.len(){
+        result.m[index] = m1.m[index] - m2.m[index];
+    }
+    result
+}
 
 // Данные заранее вычисленной сигмоиды.
 // Значение сигмоиды = 0..2^8
@@ -116,17 +145,17 @@ pub struct Sigmoida{
     koeff_y: f32,
     koeff_x: f32,
     len: Tdata,
-    m:[u8; 256],
+    m:[u8; FORMFACTOR as usize],
 }
 
 impl Sigmoida{
     pub fn new() -> Sigmoida{
         let mut result = Sigmoida{
             index_zero: 127,
-            koeff_y: 256.0,
+            koeff_y: FORMFACTOR as f32,
             koeff_x: 22.0,
-            len: 256,
-            m:[0; 256],
+            len: FORMFACTOR,
+            m:[0; FORMFACTOR as usize],
         };
         let index_zero_real = result.index_zero as f32;
         for i in 0..result.m.len(){
@@ -146,15 +175,16 @@ impl Sigmoida{
         let mut index = x + self.index_zero;
         if index < 0 {
             index = 0
-        }else if x >= self.len {
+        }else if index >= self.len {
             index = self.len-1
         };
+//         println!("{}: {}", x, index);
         self.m[index as usize]
     }
     pub fn f(&self, input: &Matrix) -> Matrix{
-        let mut output = Matrix::new(input.nrow, input.ncol, 0);
+        let mut output = Matrix::new(input.nrow, input.ncol);
         for i in 0..input.m.len(){
-            output.m[i] = self.get(input.m[i]/256) as Tdata// - 127
+            output.m[i] = self.get(input.m[i]) as Tdata// - 127
         }
         output
     }
@@ -165,35 +195,32 @@ impl Sigmoida{
 // net_01: веса связи входной-скрытый
 // net_12: веса связи скрытый-Выходной
 pub struct Neuronet{
-//     nnodes0: usize,
-//     nnodes1: usize,
-//     nnodes2: usize,
+    //весовые коэффициенты связей Вход - Скрытый слой
     net_01: Matrix,
+    //весовые коэффициенты связей Скрытый слой - Выход
     net_12: Matrix,
 }
 
 impl Neuronet{
     pub fn new(nnodes0: usize, nnodes1: usize, nnodes2: usize) -> Neuronet{
-        let neuronet = Neuronet{
-//             nnodes0: nnodes0,
-//             nnodes1: nnodes1,
-//             nnodes2: nnodes2,
-            net_01: Matrix::new_rand(nnodes1, nnodes0, -127, 127, true),
-            net_12: Matrix::new_rand(nnodes2, nnodes1, -127, 127, true),
-        };
-        neuronet
+        Neuronet{
+            net_01: Matrix::new_rand(nnodes0, nnodes1, -127, 127, true),
+            net_12: Matrix::new_rand(nnodes1, nnodes2, -127, 127, true),
+        }
     }
+    
+    // Значение выходного сигнала для значения входного сигнала
     pub fn getoutput(&self, input: &Matrix, sigmoida: &Sigmoida) -> Matrix {
         println!("вход нейросети:");
         input.print();
-        let nodes1_input = matrix_mult(input, &self.net_01);
+        let nodes1_input = matrix_mul(input, &self.net_01);
         println!("вход скрытого слоя:");
         nodes1_input.print();
         //div_matrix_elements(nodes1_input, 256);
         let nodes1_output = sigmoida.f(&nodes1_input); 
         println!("выход скрытого слоя:");
         nodes1_output.print();
-        let nodes2_input = matrix_mult(&nodes1_output, &self.net_12);
+        let nodes2_input = matrix_mul(&nodes1_output, &self.net_12);
         println!("вход последнего слоя:");
         nodes2_input.print();
         let nodes2_output = sigmoida.f(&nodes2_input); 
@@ -201,6 +228,27 @@ impl Neuronet{
         nodes2_output.print();
         nodes2_output
     }
+    
+    // Корректировка весовых коэффициентов связей
+    fn correkt_net(&self, output: &Matrix, target: &Matrix){
+        
+        if (output.nrow != target.nrow) || (output.ncol != target.ncol){
+            panic!("Размерности матриц не совпадают {}x{} != {}x{}", output.nrow,output.ncol, target.nrow,target.ncol);
+        }
+
+        //ошибки выходного слоя
+        let output_errors = matrix_sub(&target, &output);
+        println!("Ошибки выходного слоя:");
+        output_errors.print();
+        
+        //ошибки скрытого слоя:
+        let hidden_errors = matrix_mul(&self.net_12, &output_errors.t())
+            .t();
+        println!("Ошибки скрытого слоя:");
+        hidden_errors.print();
+        
+    }
+    
     pub fn training(&self){
     }
 }
@@ -209,6 +257,14 @@ fn main() {
     
     let sigmoida = Sigmoida::new();
     
+//     let mut test = Matrix::new(1,3);
+//     test.set(0,0,45368);
+//     sigmoida.f(&test).print();
+//     test.set(0,1,-7675);
+//     sigmoida.f(&test).print();
+//     test.set(0,2,42515);
+//     sigmoida.f(&test).print();
+    
     let neuronet = Neuronet::new(2,6,3);
     println!("net_01:");
     neuronet.net_01.print();
@@ -216,12 +272,17 @@ fn main() {
     neuronet.net_12.print();
     println!("-----------");
     
-    let mut inputdata_1 = Matrix::new(1,2,0);
+    let mut inputdata_1 = Matrix::new(1,2);
 //     let mut inputdata_2 = Matrix::new(1,2,0);
 //     let mut inputdata_3 = Matrix::new(1,2,0);
     
     inputdata_1.set(0,0,255);
-    inputdata_1.set(0,1,0);
+    println!("вход:");
+    inputdata_1.print();
+    let mut need_output_1 = Matrix::new(1,3);
+    need_output_1.set(0,0,255);
+    println!("требуемый выход:");
+    need_output_1.print();
     
 //     inputdata_2.set(0,0,0);
 //     inputdata_2.set(0,1,255);
@@ -229,15 +290,9 @@ fn main() {
 //     inputdata_3.set(0,0,255);
 //     inputdata_3.set(0,1,255);
     
-    let _outputdata_1 = neuronet.getoutput(&inputdata_1, &sigmoida);
+    let outputdata_1 = neuronet.getoutput(&inputdata_1, &sigmoida);
+    neuronet.correkt_net(&outputdata_1, &need_output_1);
 //     let outputdata_2 = neuronet.getoutput(&inputdata_2);
 //     let outputdata_3 = neuronet.getoutput(&inputdata_3);
-    
-//     println!("---------1---------");
-//     outputdata_1.print();
-//     println!("---------2---------");
-//     outputdata_2.print();
-//     println!("---------3---------");
-//     outputdata_3.print();
     
 }
