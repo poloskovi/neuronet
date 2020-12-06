@@ -150,7 +150,7 @@ fn matrix_add(m1: &Matrix, m2: &Matrix) -> Matrix{
 }
 
 /// (1/koeff) * errors * signal * (1-signal)
-fn m1_correctnet(errors: &Matrix, signal: &Matrix, koeff:i32) -> Matrix {
+fn m1_correctnet(errors: &Matrix, signal: &Matrix) -> Matrix {
 
     if (errors.nrow != signal.nrow) || (errors.ncol != signal.ncol){
         panic!("Размерности матриц не совпадают {}x{} != {}x{}", errors.nrow,errors.ncol, signal.nrow,signal.ncol);
@@ -158,7 +158,8 @@ fn m1_correctnet(errors: &Matrix, signal: &Matrix, koeff:i32) -> Matrix {
     
     let mut result = Matrix::new(errors.nrow, errors.ncol);
     for index in 0..result.m.len(){
-        result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / FORMFACTOR / FORMFACTOR * koeff;
+//         result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / FORMFACTOR / FORMFACTOR * koeff;
+        result.m[index] = errors.m[index] * signal.m[index] / (FORMFACTOR * 2);
     }
     result
     
@@ -266,11 +267,11 @@ impl Neuronet{
     // Корректировка весовых коэффициентов связей
     fn training(&mut self, input: &Matrix, target: &Matrix, sigmoida: &Sigmoida){
         
-        println!("требуемый выход:");
-        target.print();
+//         println!("требуемый выход:");
+//         target.print();
         
-//         println!("вход нейросети:");
-//         input.print();
+        println!("вход нейросети:");
+        input.print();
         let nodes1_input = matrix_mul(input, &self.net_01);
 //         println!("вход скрытого слоя:");
 //         nodes1_input.print();
@@ -300,20 +301,17 @@ impl Neuronet{
 //         println!("Ошибки скрытого слоя:");
 //         hidden_errors.print();
         
-        let m1 = m1_correctnet(&output_errors, &output, 10);
-//         println!("m1 скры:");
-//         m1_correctnet.print();
-        
+        let m1 = m1_correctnet(&output_errors, &output);
         let delta_net_12 = matrix_mul(&m1.t(), &hidden_output).t();
-        println!("delta_net_12:");
-        delta_net_12.print();
+//         println!("delta_net_12:");
+//         delta_net_12.print();
         
         self.net_12 = matrix_add(&self.net_12, &delta_net_12);
         
-        let m1 = m1_correctnet(&hidden_errors, &hidden_output, 10);
+        let m1 = m1_correctnet(&hidden_errors, &hidden_output);
         let delta_net_01 = matrix_mul(&m1.t(), &input).t();
-        println!("delta_net_01:");
-        delta_net_01.print();
+//         println!("delta_net_01:");
+//         delta_net_01.print();
         
         self.net_01 = matrix_add(&self.net_01, &delta_net_01);
     }
@@ -332,7 +330,7 @@ fn main() {
 //     test.set(0,2,42515);
 //     sigmoida.f(&test).print();
     
-    let mut neuronet = Neuronet::new(2,20,3);
+    let mut neuronet = Neuronet::new(2,10,3);
     println!("net_01:");
     neuronet.net_01.print();
     println!("net_12:");
@@ -358,7 +356,7 @@ fn main() {
     
 //     let outputdata_1 = neuronet.getoutput(&inputdata_1, &sigmoida);
     
-    for i in 0..10 {
+    for i in 0..50 {
         println!("======= {} ========", i);
         neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
         neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
@@ -371,4 +369,9 @@ fn main() {
 //     let outputdata_2 = neuronet.getoutput(&inputdata_2);
 //     let outputdata_3 = neuronet.getoutput(&inputdata_3);
     
+    println!("======= ВЕСА ========");
+    println!("net_01:");
+    neuronet.net_01.print();
+    println!("net_12:");
+    neuronet.net_12.print();
 }
