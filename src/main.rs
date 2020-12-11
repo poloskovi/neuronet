@@ -9,7 +9,7 @@ use rand::Rng;
 type Tdata = i32;
 const FORMFACTOR: i32 = 256;
 
-/// Матрица типа i16 произвольного размера
+/// Матрица типа TData произвольного размера
 /// # Examples
 ///
 /// ```
@@ -121,6 +121,30 @@ fn matrix_mul(m1: &Matrix, m2: &Matrix) -> Matrix{
     result
 }
 
+// Умножение матриц с одновременным применением сигмоиды
+// так будет еще быстрее
+fn matrix_mul_and_sigmoida(m1: &Matrix, m2: &Matrix, sigmoida: &Sigmoida) -> Matrix{
+    
+    if m1.ncol != m2.nrow{
+        panic!("Размерности матриц не совпадают {} != {}", m1.ncol, m2.nrow);
+    }
+    
+    let mut result = Matrix::new(m1.nrow, m2.ncol);
+    for i in 0..m1.nrow {
+        for j in 0..m2.ncol {
+            let mut cij = 0;
+            for r in 0..m1.ncol {
+                let air = m1.get(i,r);
+                let brj = m2.get(r,j);
+                cij = cij + air*brj;
+            }
+            let cij_sigm = sigmoida.f_one(cij/FORMFACTOR);
+            result.set(i,j,cij_sigm);
+        }
+    }
+    result
+}
+
 // Вычитание матриц
 fn matrix_sub(m1: &Matrix, m2: &Matrix) -> Matrix{
     
@@ -157,9 +181,15 @@ fn m1_correctnet(errors: &Matrix, signal: &Matrix) -> Matrix {
     }
     
     let mut result = Matrix::new(errors.nrow, errors.ncol);
+    
     for index in 0..result.m.len(){
-//         result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / FORMFACTOR / FORMFACTOR * koeff;
-        result.m[index] = errors.m[index] * signal.m[index] / (FORMFACTOR * 2);
+        
+        // так у Т.Рашида, но так не работает. Думаю, что из-за сомножителя (1-signal)
+        // Если signal = 1 (ошибочно), то корректировка становится равной нулю, и мы не можем скорректировать веса матрицы
+        // result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / FORMFACTOR / FORMFACTOR * koeff;
+        
+        result.m[index] = errors.m[index] * signal.m[index] / (FORMFACTOR * 2); // так работает
+        
     }
     result
     
@@ -216,13 +246,18 @@ impl Sigmoida{
             res
         }
     }
-    pub fn f(&self, input: &Matrix) -> Matrix{
+    pub fn f_matrix(&self, input: &Matrix) -> Matrix{
         let mut output = Matrix::new(input.nrow, input.ncol);
         for i in 0..input.m.len(){
             output.m[i] = self.get(input.m[i]) as Tdata
         }
         output
     }
+
+    pub fn f_one(&self, input: Tdata) -> Tdata{
+        self.get(input) as Tdata
+    }
+    
 }
 
 // Нейросеть.
@@ -246,74 +281,59 @@ impl Neuronet{
     
     // Значение выходного сигнала для значения входного сигнала
     pub fn getoutput(&self, input: &Matrix, sigmoida: &Sigmoida) -> Matrix {
-        println!("вход нейросети:");
-        input.print();
-        let nodes1_input = matrix_mul(input, &self.net_01);
-        println!("вход скрытого слоя:");
-        nodes1_input.print();
-        //div_matrix_elements(nodes1_input, 256);
-        let hidden_output = sigmoida.f(&nodes1_input); 
-        println!("выход скрытого слоя:");
-        hidden_output.print();
-        let nodes2_input = matrix_mul(&hidden_output, &self.net_12);
-        println!("вход последнего слоя:");
-        nodes2_input.print();
-        let output = sigmoida.f(&nodes2_input); 
-        println!("выход нейросети:");
-        output.print();
+//         let hidden_input = matrix_mul(input, &self.net_01);
+        let hidden_output = matrix_mul_and_sigmoida(input, &self.net_01, sigmoida); 
+//         let nodes2_input = matrix_mul(&hidden_output, &self.net_12);
+        let output = matrix_mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
         output
     }
     
-    // Корректировка весовых коэффициентов связей
+    pub fn output_index(&self, input: &Matrix, sigmoida: &Sigmoida) -> usize {
+        let output = self.getoutput(input, sigmoida);
+        let mut max = output.m[0];
+        let mut imax = 0;
+        for i in 1..output.m.len(){
+            if output.m[i]>max {
+                max = output.m[i];
+                imax = i;
+            }
+        }
+        imax
+    }
+    
+    // Тренировка
     fn training(&mut self, input: &Matrix, target: &Matrix, sigmoida: &Sigmoida){
         
-//         println!("требуемый выход:");
-//         target.print();
+        // Получение выходного значения
         
-        println!("вход нейросети:");
-        input.print();
-        let nodes1_input = matrix_mul(input, &self.net_01);
-//         println!("вход скрытого слоя:");
-//         nodes1_input.print();
-        let hidden_output = sigmoida.f(&nodes1_input); 
-//         println!("выход скрытого слоя:");
-//         hidden_output.print();
-        let nodes2_input = matrix_mul(&hidden_output, &self.net_12);
-//         println!("вход последнего слоя:");
-//         nodes2_input.print();
-        let output = sigmoida.f(&nodes2_input); 
-        println!("выход нейросети:");
-        output.print();
+//         let hidden_input = matrix_mul(input, &self.net_01);
+//         let hidden_output = sigmoida.f(&nodes1_input); 
+//         let nodes2_input = matrix_mul(&hidden_output, &self.net_12);
+//         let output = sigmoida.f(&nodes2_input); 
+        let hidden_output = matrix_mul_and_sigmoida(input, &self.net_01, sigmoida); 
+        let output = matrix_mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
         
-         if (output.nrow != target.nrow) || (output.ncol != target.ncol){
+        // Корректировка весов связей
+        
+        if (output.nrow != target.nrow) || (output.ncol != target.ncol){
              panic!("Размерности матриц не совпадают {}x{} != {}x{}", 
                     output.nrow, output.ncol, target.nrow, target.ncol);
-         }
+        }
 
-        //ошибки выходного слоя
         let output_errors = matrix_sub(&target, &output);
-//         println!("Ошибки выходного слоя:");
-//         output_errors.print();
-        
-        //ошибки скрытого слоя:
         let hidden_errors = matrix_mul(&self.net_12, &output_errors.t())
             .t();
-//         println!("Ошибки скрытого слоя:");
-//         hidden_errors.print();
         
         let m1 = m1_correctnet(&output_errors, &output);
         let delta_net_12 = matrix_mul(&m1.t(), &hidden_output).t();
-//         println!("delta_net_12:");
-//         delta_net_12.print();
         
         self.net_12 = matrix_add(&self.net_12, &delta_net_12);
         
         let m1 = m1_correctnet(&hidden_errors, &hidden_output);
         let delta_net_01 = matrix_mul(&m1.t(), &input).t();
-//         println!("delta_net_01:");
-//         delta_net_01.print();
         
         self.net_01 = matrix_add(&self.net_01, &delta_net_01);
+        
     }
     
 }
@@ -322,20 +342,7 @@ fn main() {
     
     let sigmoida = Sigmoida::new();
     
-//     let mut test = Matrix::new(1,3);
-//     test.set(0,0,45368);
-//     sigmoida.f(&test).print();
-//     test.set(0,1,-7675);
-//     sigmoida.f(&test).print();
-//     test.set(0,2,42515);
-//     sigmoida.f(&test).print();
-    
     let mut neuronet = Neuronet::new(2,10,3);
-    println!("net_01:");
-    neuronet.net_01.print();
-    println!("net_12:");
-    neuronet.net_12.print();
-    println!("-----------");
     
     let mut inputdata_1 = Matrix::new(1,2);
     let mut inputdata_2 = Matrix::new(1,2);
@@ -354,24 +361,14 @@ fn main() {
     let mut need_output_3 = Matrix::new(1,3);
     need_output_3.set(0,2,255);
     
-//     let outputdata_1 = neuronet.getoutput(&inputdata_1, &sigmoida);
-    
-    for i in 0..50 {
-        println!("======= {} ========", i);
+    for _i in 0..20 {
         neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
         neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
         neuronet.training(&inputdata_3, &need_output_3, &sigmoida);
     }
-//     println!("======= 2 ========");
-//     neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
-//     println!("======= 3 ========");
-//     neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
-//     let outputdata_2 = neuronet.getoutput(&inputdata_2);
-//     let outputdata_3 = neuronet.getoutput(&inputdata_3);
     
-    println!("======= ВЕСА ========");
-    println!("net_01:");
-    neuronet.net_01.print();
-    println!("net_12:");
-    neuronet.net_12.print();
+    println!("{}", neuronet.output_index(&inputdata_1, &sigmoida));
+    println!("{}", neuronet.output_index(&inputdata_2, &sigmoida));
+    println!("{}", neuronet.output_index(&inputdata_3, &sigmoida));
+    
 }
