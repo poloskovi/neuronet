@@ -26,13 +26,58 @@ pub struct Matrix{
 }
 
 impl fmt::Display for Matrix {
+    
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        
+        // для больших матриц вместо части строк и столбцов выводим ...
+        let skip_rows_after: usize = 14;
+        let skip_columns_after: usize = 9;
+        
+        let skip_rows = self.nrow > skip_rows_after + 1;
+        let skip_columns = self.ncol > skip_columns_after + 1;
+        
         for row in 0..self.nrow{
-            write!(f, "| ")?;
-            for col in 0..self.ncol{
-                write!(f, "{:4} ", self.get(row,col))?;
+            
+            if skip_rows {
+                if row > skip_rows_after + 1 && row != self.nrow-1 {
+                    continue;
+                }
             }
-            writeln!(f, " |")?;
+            
+            if self.nrow == 1{
+                write!(f, "⟮ ")?; //U+27EE
+            } else if row == 0 {
+                write!(f, "⎛ ")?; //U+239B
+            } else if row == self.nrow-1 {
+                write!(f, "⎝ ")?;
+            } else {
+                write!(f, "⎜ ")?;
+            }
+            
+            for col in 0..self.ncol{
+                if skip_columns {
+                    if col > skip_columns_after && col != self.ncol-1 {
+                        if col == skip_columns_after + 1 {
+                            write!(f, "{:4} ", " ...")?;
+                        }
+                        continue;
+                    }
+                }
+                if skip_rows && row == skip_rows_after + 1 {
+                    write!(f, "{:4} ", " ...")?;
+                }else{
+                    write!(f, "{:4} ", self.get(row,col))?;
+                }
+            }
+            if self.nrow == 1{
+                writeln!(f, " ⟯")?;
+            } else if row == 0 {
+                writeln!(f, " ⎞")?;
+            } else if row == self.nrow-1 {
+                writeln!(f, " ⎠")?;
+            } else {
+                writeln!(f, " ⎟")?;
+            }
         }
         write!(f, "")
     }
@@ -86,16 +131,6 @@ impl Matrix{
         let index = row * self.ncol + col;
         self.m[index] = x;
     }
-    
-    /// Выводит матрицу на экран
-//     pub fn print(&self) {
-//         for row in 0..self.nrow{
-//             for col in 0..self.ncol{
-//                 print!("{} ", self.get(row,col));
-//             }
-//             println!();
-//         }
-//     }
     
     /// Возвращает транспонированную матрицу
     pub fn t(&self) -> Matrix{
@@ -183,28 +218,6 @@ fn matrix_add(m1: &Matrix, m2: &Matrix) -> Matrix{
     result
 }
 
-/// (1/koeff) * errors * signal * (1-signal)
-fn m1_correctnet(errors: &Matrix, signal: &Matrix) -> Matrix {
-
-    if (errors.nrow != signal.nrow) || (errors.ncol != signal.ncol){
-        panic!("Размерности матриц не совпадают {}x{} != {}x{}", errors.nrow,errors.ncol, signal.nrow,signal.ncol);
-    }
-    
-    let mut result = Matrix::new(errors.nrow, errors.ncol);
-    
-    for index in 0..result.m.len(){
-        
-        // так у Т.Рашида, но так не работает. Думаю, что из-за сомножителя (1-signal)
-        // Если signal = 1 (ошибочно), то корректировка становится равной нулю, и мы не можем скорректировать веса матрицы
-        // result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / FORMFACTOR / FORMFACTOR * koeff;
-        
-        result.m[index] = errors.m[index] * signal.m[index] / (FORMFACTOR * 2); // так работает
-        
-    }
-    result
-    
-}
-
 // Данные заранее вычисленной сигмоиды.
 // Значение сигмоиды = 0..2^8
 // Сигмоида умножается на коэффициенты матрицы, их значения -2^7..+2^7
@@ -233,12 +246,14 @@ impl Sigmoida{
         }
         result
     }
+    
     fn getinitsigmoida(&self, i:usize, index_zero_real: f32) -> u8{
         let x: f32 = (i as f32 - index_zero_real) / self.koeff_x;
         let exp = (-x).exp();
         let y = 1.0/ (1.0 + exp);
         (y * self.koeff_y) as u8
     }
+    
     pub fn get(&self, x:Tdata) -> u8{
         // x - входной сигнал. Он может быть положительным и отрицательным.
         // его нужно привести к index - индексу элемента массива значений сигмоиды
@@ -256,6 +271,7 @@ impl Sigmoida{
             res
         }
     }
+    
     pub fn f_matrix(&self, input: &Matrix) -> Matrix{
         let mut output = Matrix::new(input.nrow, input.ncol);
         for i in 0..input.m.len(){
@@ -267,6 +283,28 @@ impl Sigmoida{
     pub fn f_one(&self, input: Tdata) -> Tdata{
         self.get(input) as Tdata
     }
+    
+}
+
+/// (1/koeff) * errors * signal * (1-signal)
+fn m1_correctnet(errors: &Matrix, signal: &Matrix) -> Matrix {
+
+    if (errors.nrow != signal.nrow) || (errors.ncol != signal.ncol){
+        panic!("Размерности матриц не совпадают {}x{} != {}x{}", errors.nrow,errors.ncol, signal.nrow,signal.ncol);
+    }
+    
+    let mut result = Matrix::new(errors.nrow, errors.ncol);
+    
+    for index in 0..result.m.len(){
+        
+        // так у Т.Рашида
+        result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / (FORMFACTOR * FORMFACTOR);
+
+        // проба, работает нестабильно
+        // result.m[index] = errors.m[index] * signal.m[index] / (FORMFACTOR * 2); // так работает
+        
+    }
+    result
     
 }
 
@@ -282,6 +320,7 @@ pub struct Neuronet{
 }
 
 impl Neuronet{
+    
     pub fn new(nnodes0: usize, nnodes1: usize, nnodes2: usize) -> Neuronet{
         Neuronet{
             net_01: Matrix::new_rand(nnodes0, nnodes1, -127, 127, true),
@@ -356,35 +395,62 @@ fn main() {
     
     let sigmoida = Sigmoida::new();
     
-    let mut neuronet = Neuronet::new(2,10,3);
-    println!("{}", neuronet.net_01);
-    println!("{}", neuronet.net_12);
+    let mut neuronet = Neuronet::new(3,100,4);
+//     println!("{}", neuronet.net_01);
+//     println!("{}", neuronet.net_12);
     
-    let mut inputdata_1 = Matrix::new(1,2);
-    let mut inputdata_2 = Matrix::new(1,2);
-    let mut inputdata_3 = Matrix::new(1,2);
+    let mut inputdata_1 = Matrix::new(1,3);
+    let mut inputdata_2 = Matrix::new(1,3);
+    let mut inputdata_3 = Matrix::new(1,3);
+    let mut inputdata_4 = Matrix::new(1,3);
     
     inputdata_1.set(0,0,255);
-    let mut need_output_1 = Matrix::new(1,3);
+    let mut need_output_1 = Matrix::new(1,4);
     need_output_1.set(0,0,255);
     
     inputdata_2.set(0,1,255);
-    let mut need_output_2 = Matrix::new(1,3);
+    let mut need_output_2 = Matrix::new(1,4);
     need_output_2.set(0,1,255);
 
     inputdata_3.set(0,0,255);
     inputdata_3.set(0,1,255);
-    let mut need_output_3 = Matrix::new(1,3);
+    let mut need_output_3 = Matrix::new(1,4);
     need_output_3.set(0,2,255);
+    
+    inputdata_4.set(0,2,255);
+    let mut need_output_4 = Matrix::new(1,4);
+    need_output_4.set(0,3,255);
+
+//     println!("{}", inputdata_1);
+//     println!("{}", need_output_1);
+//     println!("{}", inputdata_2);
+//     println!("{}", need_output_2);
+//     println!("{}", inputdata_3);
+//     println!("{}", need_output_3);
+//     println!("{}", inputdata_4);
+//     println!("{}", need_output_4);
+//     
+//     return;
     
     for _i in 0..20 {
         neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
         neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
         neuronet.training(&inputdata_3, &need_output_3, &sigmoida);
+        neuronet.training(&inputdata_4, &need_output_4, &sigmoida);
     }
     
-    println!("{}", neuronet.output_index(&inputdata_1, &sigmoida));
-    println!("{}", neuronet.output_index(&inputdata_2, &sigmoida));
-    println!("{}", neuronet.output_index(&inputdata_3, &sigmoida));
+//     println!("{}", neuronet.output_index(&inputdata_1, &sigmoida));
+//     println!("{}", neuronet.output_index(&inputdata_2, &sigmoida));
+//     println!("{}", neuronet.output_index(&inputdata_3, &sigmoida));
+
+    println!("{}", neuronet.net_01);
+    println!("{}", neuronet.net_12);
+    
+    println!("0: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
+    println!("1: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
+    println!("2: {}", neuronet.getoutput(&inputdata_3, &sigmoida));
+    println!("4: {}", neuronet.getoutput(&inputdata_4, &sigmoida));
+    
+//     println!("{}", Matrix::new_rand(100, 100, 0, 255, false));
     
 }
