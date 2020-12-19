@@ -1,3 +1,5 @@
+use std::fmt;
+
 // На выходе узла сети сигнал в целых числах (+/-), Uвых(i)
 // Выходной сигнал умножается на значение матрицы: Uвых(i) * A(i,j)
 // Входным сигналом следующего слоя является сигмоида сумм выходных сигналов предыдущего слоя, умноженных на матрицу значений:
@@ -17,15 +19,23 @@ const FORMFACTOR: i32 = 256;
 /// m.set(2, 3, 5);
 /// m.prt();
 /// ```
-// #[derive(Clone, Copy)]
 pub struct Matrix{
     m: Vec<Tdata>,
     nrow: usize,
     ncol: usize,
 }
 
-fn min(v1:usize, v2:usize)->usize{
-    if v1>v2 {v2}else{v1}
+impl fmt::Display for Matrix {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for row in 0..self.nrow{
+            write!(f, "| ")?;
+            for col in 0..self.ncol{
+                write!(f, "{:4} ", self.get(row,col))?;
+            }
+            writeln!(f, " |")?;
+        }
+        write!(f, "")
+    }
 }
 
 impl Matrix{
@@ -78,14 +88,14 @@ impl Matrix{
     }
     
     /// Выводит матрицу на экран
-    pub fn print(&self) {
-        for row in 0..self.nrow{
-            for col in 0..self.ncol{
-                print!("{} ", self.get(row,col));
-            }
-            println!();
-        }
-    }
+//     pub fn print(&self) {
+//         for row in 0..self.nrow{
+//             for col in 0..self.ncol{
+//                 print!("{} ", self.get(row,col));
+//             }
+//             println!();
+//         }
+//     }
     
     /// Возвращает транспонированную матрицу
     pub fn t(&self) -> Matrix{
@@ -338,11 +348,17 @@ impl Neuronet{
     
 }
 
+fn min(v1:usize, v2:usize)->usize{
+    if v1>v2 {v2}else{v1}
+}
+
 fn main() {
     
     let sigmoida = Sigmoida::new();
     
     let mut neuronet = Neuronet::new(2,10,3);
+    println!("{}", neuronet.net_01);
+    println!("{}", neuronet.net_12);
     
     let mut inputdata_1 = Matrix::new(1,2);
     let mut inputdata_2 = Matrix::new(1,2);
