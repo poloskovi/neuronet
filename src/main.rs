@@ -1,5 +1,3 @@
-use std::fmt;
-
 // На выходе узла сети сигнал в целых числах (+/-), Uвых(i)
 // Выходной сигнал умножается на значение матрицы: Uвых(i) * A(i,j)
 // Входным сигналом следующего слоя является сигмоида сумм выходных сигналов предыдущего слоя, умноженных на матрицу значений:
@@ -8,6 +6,8 @@ use std::fmt;
 
 extern crate rand;
 use rand::Rng;
+use std::fmt;
+
 type Tdata = i32;
 const FORMFACTOR: i32 = 256;
 
@@ -94,10 +94,10 @@ impl Matrix{
         }
     }
     
-    /// Конструктор: Единичная матрица
-    pub fn new_ed(nrow: usize, ncol: usize) -> Matrix {
-        let mut result = Matrix::new(ncol, nrow);
-        for i in 0..min(nrow, ncol){
+    /// Конструктор: Квадратная единичная матрица
+    pub fn new_ed(nrowcol: usize) -> Matrix {
+        let mut result = Matrix::new(nrowcol, nrowcol);
+        for i in 0..nrowcol{
             result.set(i,i,1);
         }
         result
@@ -142,80 +142,81 @@ impl Matrix{
         }
         result
     }
-}
-
-// Умножение матриц
-fn matrix_mul(m1: &Matrix, m2: &Matrix) -> Matrix{
     
-    if m1.ncol != m2.nrow{
-        panic!("Размерности матриц не совпадают {} != {}", m1.ncol, m2.nrow);
-    }
+    // Вычитание
+    fn sub(m1: &Matrix, m2: &Matrix) -> Matrix{
     
-    let mut result = Matrix::new(m1.nrow, m2.ncol);
-    for i in 0..m1.nrow {
-        for j in 0..m2.ncol {
-            let mut cij = 0;
-            for r in 0..m1.ncol {
-                let air = m1.get(i,r);
-                let brj = m2.get(r,j);
-                cij = cij + air*brj;
-            }
-            result.set(i,j,cij / FORMFACTOR);
+        if (m1.nrow != m2.nrow) || (m1.ncol != m2.ncol){
+            panic!("Размерности матриц не совпадают {}x{} != {}x{}", m1.nrow,m1.ncol, m2.nrow,m2.ncol);
         }
-    }
-    result
-}
-
-// Умножение матриц с одновременным применением сигмоиды
-// так будет еще быстрее
-fn matrix_mul_and_sigmoida(m1: &Matrix, m2: &Matrix, sigmoida: &Sigmoida) -> Matrix{
     
-    if m1.ncol != m2.nrow{
-        panic!("Размерности матриц не совпадают {} != {}", m1.ncol, m2.nrow);
-    }
-    
-    let mut result = Matrix::new(m1.nrow, m2.ncol);
-    for i in 0..m1.nrow {
-        for j in 0..m2.ncol {
-            let mut cij = 0;
-            for r in 0..m1.ncol {
-                let air = m1.get(i,r);
-                let brj = m2.get(r,j);
-                cij = cij + air*brj;
-            }
-            let cij_sigm = sigmoida.f_one(cij/FORMFACTOR);
-            result.set(i,j,cij_sigm);
+        let mut result = Matrix::new(m1.nrow, m2.ncol);
+        for index in 0..result.m.len(){
+            result.m[index] = m1.m[index] - m2.m[index];
         }
+        result
     }
-    result
-}
 
-// Вычитание матриц
-fn matrix_sub(m1: &Matrix, m2: &Matrix) -> Matrix{
+    // Сложение
+    fn add(m1: &Matrix, m2: &Matrix) -> Matrix{
     
-    if (m1.nrow != m2.nrow) || (m1.ncol != m2.ncol){
-        panic!("Размерности матриц не совпадают {}x{} != {}x{}", m1.nrow,m1.ncol, m2.nrow,m2.ncol);
-    }
+        if (m1.nrow != m2.nrow) || (m1.ncol != m2.ncol){
+            panic!("Размерности матриц не совпадают {}x{} != {}x{}", m1.nrow,m1.ncol, m2.nrow,m2.ncol);
+        }
     
-    let mut result = Matrix::new(m1.nrow, m2.ncol);
-    for index in 0..result.m.len(){
-        result.m[index] = m1.m[index] - m2.m[index];
+        let mut result = Matrix::new(m1.nrow, m2.ncol);
+        for index in 0..result.m.len(){
+            result.m[index] = m1.m[index] + m2.m[index];
+        }
+        result
     }
-    result
-}
 
-// Сложение матриц
-fn matrix_add(m1: &Matrix, m2: &Matrix) -> Matrix{
+    // Умножение
+    fn mul(m1: &Matrix, m2: &Matrix) -> Matrix{
     
-    if (m1.nrow != m2.nrow) || (m1.ncol != m2.ncol){
-        panic!("Размерности матриц не совпадают {}x{} != {}x{}", m1.nrow,m1.ncol, m2.nrow,m2.ncol);
-    }
+        if m1.ncol != m2.nrow{
+            panic!("Размерности матриц не совпадают {} != {}", m1.ncol, m2.nrow);
+        }
     
-    let mut result = Matrix::new(m1.nrow, m2.ncol);
-    for index in 0..result.m.len(){
-        result.m[index] = m1.m[index] + m2.m[index];
+        let mut result = Matrix::new(m1.nrow, m2.ncol);
+        for i in 0..m1.nrow {
+            for j in 0..m2.ncol {
+                let mut cij = 0;
+                for r in 0..m1.ncol {
+                    let air = m1.get(i,r);
+                    let brj = m2.get(r,j);
+                    cij = cij + air*brj;
+                }
+                result.set(i,j,cij / FORMFACTOR);
+            }
+        }
+        result
     }
-    result
+
+    // Умножение матриц с одновременным применением сигмоиды
+    // так будет еще быстрее
+    fn mul_and_sigmoida(m1: &Matrix, m2: &Matrix, sigmoida: &Sigmoida) -> Matrix{
+    
+        if m1.ncol != m2.nrow{
+            panic!("Размерности матриц не совпадают {} != {}", m1.ncol, m2.nrow);
+        }
+    
+        let mut result = Matrix::new(m1.nrow, m2.ncol);
+        for i in 0..m1.nrow {
+            for j in 0..m2.ncol {
+                let mut cij = 0;
+                for r in 0..m1.ncol {
+                    let air = m1.get(i,r);
+                    let brj = m2.get(r,j);
+                    cij = cij + air*brj;
+                }
+                let cij_sigm = sigmoida.f_one(cij/FORMFACTOR);
+                result.set(i,j,cij_sigm);
+            }
+        }
+        result
+    }
+
 }
 
 // Данные заранее вычисленной сигмоиды.
@@ -286,28 +287,6 @@ impl Sigmoida{
     
 }
 
-/// (1/koeff) * errors * signal * (1-signal)
-fn m1_correctnet(errors: &Matrix, signal: &Matrix) -> Matrix {
-
-    if (errors.nrow != signal.nrow) || (errors.ncol != signal.ncol){
-        panic!("Размерности матриц не совпадают {}x{} != {}x{}", errors.nrow,errors.ncol, signal.nrow,signal.ncol);
-    }
-    
-    let mut result = Matrix::new(errors.nrow, errors.ncol);
-    
-    for index in 0..result.m.len(){
-        
-        // так у Т.Рашида
-        result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / (FORMFACTOR * FORMFACTOR);
-
-        // проба, работает нестабильно
-        // result.m[index] = errors.m[index] * signal.m[index] / (FORMFACTOR * 2); // так работает
-        
-    }
-    result
-    
-}
-
 // Нейросеть.
 // слои: входной, скрытый, выходной
 // net_01: веса связи входной-скрытый
@@ -331,9 +310,9 @@ impl Neuronet{
     // Значение выходного сигнала для значения входного сигнала
     pub fn getoutput(&self, input: &Matrix, sigmoida: &Sigmoida) -> Matrix {
 //         let hidden_input = matrix_mul(input, &self.net_01);
-        let hidden_output = matrix_mul_and_sigmoida(input, &self.net_01, sigmoida); 
+        let hidden_output = Matrix::mul_and_sigmoida(input, &self.net_01, sigmoida); 
 //         let nodes2_input = matrix_mul(&hidden_output, &self.net_12);
-        let output = matrix_mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
+        let output = Matrix::mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
         output
     }
     
@@ -359,8 +338,8 @@ impl Neuronet{
 //         let hidden_output = sigmoida.f(&nodes1_input); 
 //         let nodes2_input = matrix_mul(&hidden_output, &self.net_12);
 //         let output = sigmoida.f(&nodes2_input); 
-        let hidden_output = matrix_mul_and_sigmoida(input, &self.net_01, sigmoida); 
-        let output = matrix_mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
+        let hidden_output = Matrix::mul_and_sigmoida(input, &self.net_01, sigmoida); 
+        let output = Matrix::mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
         
         // Корректировка весов связей
         
@@ -369,26 +348,42 @@ impl Neuronet{
                     output.nrow, output.ncol, target.nrow, target.ncol);
         }
 
-        let output_errors = matrix_sub(&target, &output);
-        let hidden_errors = matrix_mul(&self.net_12, &output_errors.t())
+        let output_errors = Matrix::sub(&target, &output);
+        let hidden_errors = Matrix::mul(&self.net_12, &output_errors.t())
             .t();
         
-        let m1 = m1_correctnet(&output_errors, &output);
-        let delta_net_12 = matrix_mul(&m1.t(), &hidden_output).t();
+        let m1 = Neuronet::m1_correctnet(&output_errors, &output);
+        let delta_net_12 = Matrix::mul(&m1.t(), &hidden_output).t();
         
-        self.net_12 = matrix_add(&self.net_12, &delta_net_12);
+        self.net_12 = Matrix::add(&self.net_12, &delta_net_12);
         
-        let m1 = m1_correctnet(&hidden_errors, &hidden_output);
-        let delta_net_01 = matrix_mul(&m1.t(), &input).t();
+        let m1 = Neuronet::m1_correctnet(&hidden_errors, &hidden_output);
+        let delta_net_01 = Matrix::mul(&m1.t(), &input).t();
         
-        self.net_01 = matrix_add(&self.net_01, &delta_net_01);
+        self.net_01 = Matrix::add(&self.net_01, &delta_net_01);
         
     }
     
-}
+    // (1/koeff) * errors * signal * (1-signal)
+    fn m1_correctnet(errors: &Matrix, signal: &Matrix) -> Matrix {
 
-fn min(v1:usize, v2:usize)->usize{
-    if v1>v2 {v2}else{v1}
+        if (errors.nrow != signal.nrow) || (errors.ncol != signal.ncol){
+            panic!("Размерности матриц не совпадают {}x{} != {}x{}", errors.nrow,errors.ncol, signal.nrow,signal.ncol);
+        }
+    
+        let mut result = Matrix::new(errors.nrow, errors.ncol);
+    
+        for index in 0..result.m.len(){
+        
+            // так у Т.Рашида
+            result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / (FORMFACTOR * FORMFACTOR);
+
+            // проба, работает нестабильно
+            // result.m[index] = errors.m[index] * signal.m[index] / (FORMFACTOR * 2); // так работает
+        }
+        result
+    }
+
 }
 
 fn main() {
@@ -396,8 +391,6 @@ fn main() {
     let sigmoida = Sigmoida::new();
     
     let mut neuronet = Neuronet::new(3,100,4);
-//     println!("{}", neuronet.net_01);
-//     println!("{}", neuronet.net_12);
     
     let mut inputdata_1 = Matrix::new(1,3);
     let mut inputdata_2 = Matrix::new(1,3);
@@ -439,10 +432,6 @@ fn main() {
         neuronet.training(&inputdata_4, &need_output_4, &sigmoida);
     }
     
-//     println!("{}", neuronet.output_index(&inputdata_1, &sigmoida));
-//     println!("{}", neuronet.output_index(&inputdata_2, &sigmoida));
-//     println!("{}", neuronet.output_index(&inputdata_3, &sigmoida));
-
     println!("{}", neuronet.net_01);
     println!("{}", neuronet.net_12);
     
@@ -450,7 +439,5 @@ fn main() {
     println!("1: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
     println!("2: {}", neuronet.getoutput(&inputdata_3, &sigmoida));
     println!("4: {}", neuronet.getoutput(&inputdata_4, &sigmoida));
-    
-//     println!("{}", Matrix::new_rand(100, 100, 0, 255, false));
     
 }
