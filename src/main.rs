@@ -265,11 +265,16 @@ impl Sigmoida{
             index = self.len-1
         };
 //         println!("{}: {}", x, index);
-        let res = self.m[index as usize];
-        if res == 0{
-            1//чтобы не вырождалось
-        }else{
-            res
+        let res = self.m[index as usize] as Tdata;
+        // Чтобы нейросеть не вырождалась, на концах оставляем дельту ~10%
+        // (см. функцию m1_correctnet)
+        let delta = FORMFACTOR / 32;
+        if res < delta{
+            delta as u8
+        } else if res > FORMFACTOR - delta{
+            (FORMFACTOR - delta) as u8
+        } else {
+            res as u8
         }
     }
     
@@ -397,22 +402,24 @@ fn main() {
     let mut inputdata_3 = Matrix::new(1,3);
     let mut inputdata_4 = Matrix::new(1,3);
     
-    inputdata_1.set(0,0,255);
+    let max = 255;
+    
+    inputdata_1.set(0,0,max);
     let mut need_output_1 = Matrix::new(1,4);
-    need_output_1.set(0,0,255);
+    need_output_1.set(0,0,max);
     
-    inputdata_2.set(0,1,255);
+    inputdata_2.set(0,1,max);
     let mut need_output_2 = Matrix::new(1,4);
-    need_output_2.set(0,1,255);
+    need_output_2.set(0,1,max);
 
-    inputdata_3.set(0,0,255);
-    inputdata_3.set(0,1,255);
+    inputdata_3.set(0,0,max);
+    inputdata_3.set(0,1,max);
     let mut need_output_3 = Matrix::new(1,4);
-    need_output_3.set(0,2,255);
+    need_output_3.set(0,2,max);
     
-    inputdata_4.set(0,2,255);
+    inputdata_4.set(0,2,max);
     let mut need_output_4 = Matrix::new(1,4);
-    need_output_4.set(0,3,255);
+    need_output_4.set(0,3,max);
 
 //     println!("{}", inputdata_1);
 //     println!("{}", need_output_1);
