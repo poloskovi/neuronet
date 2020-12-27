@@ -62,64 +62,130 @@ impl Neuronet{
 
 fn main() {
     
+    // Для примера используем простое двоичное преобразование.
+    // Научим нейросеть преобразовывать входящий двоичный входящий сигнал в десятичное число!
+    
     let sigmoida = matrix::Sigmoida::new();
     
-    let n_input = 3; // количество входных сигналов
-    let n_output = 5; // количество выходных сигналов
-    let n_hidden = 20; // количество узлов скрытого слоя
+    let n_input = 4; // количество входных сигналов
+    let n_output = 10; // количество выходных сигналов
+    let n_hidden = 100; // количество узлов скрытого слоя
     let mut neuronet = Neuronet::new(n_input, n_hidden, n_output);
     
+    let mut inputdata_0 = matrix::Matrix::new(1,n_input);
     let mut inputdata_1 = matrix::Matrix::new(1,n_input);
     let mut inputdata_2 = matrix::Matrix::new(1,n_input);
     let mut inputdata_3 = matrix::Matrix::new(1,n_input);
     let mut inputdata_4 = matrix::Matrix::new(1,n_input);
     let mut inputdata_5 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_6 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_7 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_8 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_9 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_10 = matrix::Matrix::new(1,n_input);
     
+    let mut need_output_0 = matrix::Matrix::new(1,n_output);
     let mut need_output_1 = matrix::Matrix::new(1,n_output);
     let mut need_output_2 = matrix::Matrix::new(1,n_output);
     let mut need_output_3 = matrix::Matrix::new(1,n_output);
     let mut need_output_4 = matrix::Matrix::new(1,n_output);
     let mut need_output_5 = matrix::Matrix::new(1,n_output);
+    let mut need_output_6 = matrix::Matrix::new(1,n_output);
+    let mut need_output_7 = matrix::Matrix::new(1,n_output);
+    let mut need_output_8 = matrix::Matrix::new(1,n_output);
+    let mut need_output_9 = matrix::Matrix::new(1,n_output);
+    let mut need_output_10 = matrix::Matrix::new(1,n_output);
     
     let max = 255;
     
-    // Для примера используем простое двоичное преобразование.
-    // Научим нейросеть преобразовывать входящий двоичный сигнал в число (порядковый номер узла выходного слоя)!
+    // 0000 = 0
+    inputdata_0.set(0,3,0);
+    inputdata_0.set(0,2,0);
+    inputdata_0.set(0,1,0);
+    inputdata_0.set(0,0,0);
     
-    //пример 1: 001 = 1
+    need_output_0.set(0,0,max);
+    
+    // 0001 = 1
+    inputdata_1.set(0,3,0);
     inputdata_1.set(0,2,0);
     inputdata_1.set(0,1,0);
     inputdata_1.set(0,0,max);
     
-    need_output_1.set(0,0,max);
+    need_output_1.set(0,1,max);
     
-    //пример 2: 010 = 2
+    // 0010 = 2
+    inputdata_2.set(0,3,0);
     inputdata_2.set(0,2,0);
     inputdata_2.set(0,1,max);
     inputdata_2.set(0,0,0);
     
-    need_output_2.set(0,1,max);
+    need_output_2.set(0,2,max);
 
-    //пример 3: 011 = 3
+    // 0011 = 3
+    inputdata_3.set(0,3,0);
     inputdata_3.set(0,2,0);
     inputdata_3.set(0,1,max);
     inputdata_3.set(0,0,max);
     
-    need_output_3.set(0,2,max);
+    need_output_3.set(0,3,max);
     
-    //пример 4: 100 = 4
+    // 0100 = 4
+    inputdata_4.set(0,3,0);
     inputdata_4.set(0,2,max);
     inputdata_4.set(0,1,0);
     inputdata_4.set(0,0,0);
     
-    need_output_4.set(0,3,max);
+    need_output_4.set(0,4,max);
 
-    //пример 5: 101 = 5
+    // 0101 = 5
+    inputdata_5.set(0,3,0);
     inputdata_5.set(0,2,max);
     inputdata_5.set(0,1,0);
     inputdata_5.set(0,0,max);
     
-    need_output_5.set(0,4,max);
+    need_output_5.set(0,5,max);
+
+    // 0110 = 6
+    inputdata_6.set(0,3,0);
+    inputdata_6.set(0,2,max);
+    inputdata_6.set(0,1,max);
+    inputdata_6.set(0,0,0);
+    
+    need_output_6.set(0,6,max);
+
+    // 0111 = 7
+    inputdata_7.set(0,3,0);
+    inputdata_7.set(0,2,max);
+    inputdata_7.set(0,1,max);
+    inputdata_7.set(0,0,max);
+    
+    need_output_7.set(0,7,max);
+
+    // 1000 = 8
+    inputdata_8.set(0,3,max);
+    inputdata_8.set(0,2,0);
+    inputdata_8.set(0,1,0);
+    inputdata_8.set(0,0,0);
+    
+    need_output_8.set(0,8,max);
+
+    // 1001 = 9
+    inputdata_9.set(0,3,max);
+    inputdata_9.set(0,2,0);
+    inputdata_9.set(0,1,0);
+    inputdata_9.set(0,0,max);
+    
+    need_output_9.set(0,9,max);
+
+    // 1010 = 10
+    inputdata_10.set(0,3,max);
+    inputdata_10.set(0,2,0);
+    inputdata_10.set(0,1,max);
+    inputdata_10.set(0,0,0);
+    
+    need_output_10.set(0,0,max);
+    need_output_10.set(0,1,max);
 
     for _i in 0..20 {
         neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
@@ -127,16 +193,27 @@ fn main() {
         neuronet.training(&inputdata_3, &need_output_3, &sigmoida);
         neuronet.training(&inputdata_4, &need_output_4, &sigmoida);
         neuronet.training(&inputdata_5, &need_output_5, &sigmoida);
+        neuronet.training(&inputdata_6, &need_output_6, &sigmoida);
+        neuronet.training(&inputdata_7, &need_output_7, &sigmoida);
+        neuronet.training(&inputdata_8, &need_output_8, &sigmoida);
+        neuronet.training(&inputdata_9, &need_output_9, &sigmoida);
+        neuronet.training(&inputdata_10, &need_output_10, &sigmoida);
     }
     
     println!("{}", neuronet.net_01);
     println!("{}", neuronet.net_12);
     
-    println!("0: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
-    println!("1: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
-    println!("2: {}", neuronet.getoutput(&inputdata_3, &sigmoida));
+    println!("0: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
+    println!("1: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
+    println!("2: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
+    println!("3: {}", neuronet.getoutput(&inputdata_3, &sigmoida));
     println!("4: {}", neuronet.getoutput(&inputdata_4, &sigmoida));
-    println!("4: {}", neuronet.getoutput(&inputdata_5, &sigmoida));
+    println!("5: {}", neuronet.getoutput(&inputdata_5, &sigmoida));
+    println!("6: {}", neuronet.getoutput(&inputdata_6, &sigmoida));
+    println!("7: {}", neuronet.getoutput(&inputdata_7, &sigmoida));
+    println!("8: {}", neuronet.getoutput(&inputdata_8, &sigmoida));
+    println!("9: {}", neuronet.getoutput(&inputdata_9, &sigmoida));
+    println!("10: {}", neuronet.getoutput(&inputdata_10, &sigmoida));
     
 //     println!("{}", sigmoida);
     
