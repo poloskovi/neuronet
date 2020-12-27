@@ -4,6 +4,9 @@ use std::fmt;
 
 type Tdata = i32;
 const FORMFACTOR: i32 = 256;
+// хвосты сигма-функции, чтобы не вырождалась нейросеть
+const TAIL_DOWN: i32 = 4;
+const TAIL_UP: i32 = FORMFACTOR - TAIL_DOWN;
 
 /// Матрица типа TData произвольного размера
 /// # Examples
@@ -248,7 +251,7 @@ impl Sigmoida{
         let mut result = Sigmoida{
             index_zero: 127,
             koeff_y: FORMFACTOR as f32,
-            koeff_x: 22.0,
+            koeff_x: 30.0,//22.0,
             len: FORMFACTOR,
             m:[0; FORMFACTOR as usize],
         };
@@ -275,15 +278,13 @@ impl Sigmoida{
         }else if index >= self.len {
             index = self.len-1
         };
-//         println!("{}: {}", x, index);
         let res = self.m[index as usize] as Tdata;
-        // Чтобы нейросеть не вырождалась, на концах оставляем дельту ~10%
+        // Чтобы нейросеть не вырождалась, на концах оставляем дельту ~5
         // (см. функцию m1_correctnet)
-        let delta = FORMFACTOR / 32;
-        if res < delta{
-            delta as u8
-        } else if res > FORMFACTOR - delta{
-            (FORMFACTOR - delta) as u8
+        if res < TAIL_DOWN{
+            TAIL_DOWN as u8
+        } else if res > TAIL_UP{
+            TAIL_UP as u8
         } else {
             res as u8
         }
@@ -299,6 +300,17 @@ impl Sigmoida{
 
     pub fn f_one(&self, input: Tdata) -> Tdata{
         self.get(input) as Tdata
+    }
+    
+}
+
+impl fmt::Display for Sigmoida {
+    
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for index in 0..self.m.len() {
+            writeln!(f, "{} ", self.m[index])?;
+        }
+        writeln!(f, "")
     }
     
 }
