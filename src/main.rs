@@ -99,10 +99,13 @@ fn main() {
     let max = 255;
     
     // 0000 = 0
-    inputdata_0.set(0,3,0);
-    inputdata_0.set(0,2,0);
-    inputdata_0.set(0,1,0);
-    inputdata_0.set(0,0,0);
+    {
+        let inputvalue_zero = 100; // нейросеть не может обработать вход, состоящий только из нулей
+        inputdata_0.set(0,3,inputvalue_zero);
+        inputdata_0.set(0,2,inputvalue_zero);
+        inputdata_0.set(0,1,inputvalue_zero);
+        inputdata_0.set(0,0,inputvalue_zero);
+    }
     
     need_output_0.set(0,0,max);
     
@@ -188,6 +191,7 @@ fn main() {
     need_output_10.set(0,1,max);
 
     for _i in 0..20 {
+        neuronet.training(&inputdata_0, &need_output_0, &sigmoida);
         neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
         neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
         neuronet.training(&inputdata_3, &need_output_3, &sigmoida);
@@ -200,20 +204,23 @@ fn main() {
         neuronet.training(&inputdata_10, &need_output_10, &sigmoida);
     }
     
+    println!("Матрица весов связей Вход - Скрытый слой:");
     println!("{}", neuronet.net_01);
+    println!("Матрица весов связей Скрытый слой - Выход:");
     println!("{}", neuronet.net_12);
     
-    println!("0: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
-    println!("1: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
-    println!("2: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
-    println!("3: {}", neuronet.getoutput(&inputdata_3, &sigmoida));
-    println!("4: {}", neuronet.getoutput(&inputdata_4, &sigmoida));
-    println!("5: {}", neuronet.getoutput(&inputdata_5, &sigmoida));
-    println!("6: {}", neuronet.getoutput(&inputdata_6, &sigmoida));
-    println!("7: {}", neuronet.getoutput(&inputdata_7, &sigmoida));
-    println!("8: {}", neuronet.getoutput(&inputdata_8, &sigmoida));
-    println!("9: {}", neuronet.getoutput(&inputdata_9, &sigmoida));
-    println!("10: {}", neuronet.getoutput(&inputdata_10, &sigmoida));
+    println!("Выходные значения нейросети для различных входов:");
+    print!(" 0: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
+    print!(" 1: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
+    print!(" 2: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
+    print!(" 3: {}", neuronet.getoutput(&inputdata_3, &sigmoida));
+    print!(" 4: {}", neuronet.getoutput(&inputdata_4, &sigmoida));
+    print!(" 5: {}", neuronet.getoutput(&inputdata_5, &sigmoida));
+    print!(" 6: {}", neuronet.getoutput(&inputdata_6, &sigmoida));
+    print!(" 7: {}", neuronet.getoutput(&inputdata_7, &sigmoida));
+    print!(" 8: {}", neuronet.getoutput(&inputdata_8, &sigmoida));
+    print!(" 9: {}", neuronet.getoutput(&inputdata_9, &sigmoida));
+    print!("10: {}", neuronet.getoutput(&inputdata_10, &sigmoida));
     
 //     println!("{}", sigmoida);
     
