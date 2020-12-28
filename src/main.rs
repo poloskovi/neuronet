@@ -60,16 +60,15 @@ impl Neuronet{
     
 }
 
-fn main() {
-    
-    // Для примера используем простое двоичное преобразование.
-    // Научим нейросеть преобразовывать входящий двоичный входящий сигнал в десятичное число!
-    
+// Простое двоичное преобразование.
+// Научим нейросеть преобразовывать входящий двоичный входящий сигнал в десятичное число!
+fn test_binary_to_decimal() {
+
     let sigmoida = matrix::Sigmoida::new();
     
     let n_input = 4; // количество входных сигналов
     let n_output = 10; // количество выходных сигналов
-    let n_hidden = 100; // количество узлов скрытого слоя
+    let n_hidden = 200; // количество узлов скрытого слоя
     let mut neuronet = Neuronet::new(n_input, n_hidden, n_output);
     
     let mut inputdata_0 = matrix::Matrix::new(1,n_input);
@@ -100,10 +99,10 @@ fn main() {
     
     // 0000 = 0
     {
-        let inputvalue_zero = 100; // нейросеть не может обработать вход, состоящий только из нулей
-        inputdata_0.set(0,3,inputvalue_zero);
-        inputdata_0.set(0,2,inputvalue_zero);
-        inputdata_0.set(0,1,inputvalue_zero);
+        let inputvalue_zero = 50; // нейросеть не может обработать вход, состоящий только из нулей
+        inputdata_0.set(0,3,0);
+        inputdata_0.set(0,2,0);
+        inputdata_0.set(0,1,0);
         inputdata_0.set(0,0,inputvalue_zero);
     }
     
@@ -222,6 +221,55 @@ fn main() {
     print!(" 9: {}", neuronet.getoutput(&inputdata_9, &sigmoida));
     print!("10: {}", neuronet.getoutput(&inputdata_10, &sigmoida));
     
-//     println!("{}", sigmoida);
+}
+
+// Попробуем делать разный выход в случае одного набора входов разной интенсивности
+fn test_different_input_levels() {
+
+    let sigmoida = matrix::Sigmoida::new();
+    
+    let n_input = 2; // количество входных сигналов
+    let n_output = 3; // количество выходных сигналов
+    let n_hidden = 5; // количество узлов скрытого слоя
+    let mut neuronet = Neuronet::new(n_input, n_hidden, n_output);
+    
+    let mut inputdata_0 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_1 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_2 = matrix::Matrix::new(1,n_input);
+    
+    let mut need_output_0 = matrix::Matrix::new(1,n_output);
+    let mut need_output_1 = matrix::Matrix::new(1,n_output);
+    let mut need_output_2 = matrix::Matrix::new(1,n_output);
+    
+    inputdata_0.set(0,0,50);
+    need_output_0.set(0,0,252);
+
+    inputdata_1.set(0,0,100);
+    need_output_1.set(0,1,252);
+    
+    inputdata_2.set(0,0,252);
+    need_output_2.set(0,2,252);
+    
+    for _i in 0..1500 {
+        neuronet.training(&inputdata_0, &need_output_0, &sigmoida);
+        neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
+        neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
+    }
+    
+    println!("Матрица весов связей Вход - Скрытый слой:");
+    println!("{}", neuronet.net_01);
+    println!("Матрица весов связей Скрытый слой - Выход:");
+    println!("{}", neuronet.net_12);
+    
+    println!("Выходные значения нейросети для различных входов:");
+    print!(" 0: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
+    print!(" 1: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
+    print!(" 2: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
+}
+
+fn main() {
+    
+//     test_binary_to_decimal();
+    test_different_input_levels();
     
 }

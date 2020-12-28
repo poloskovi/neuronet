@@ -225,7 +225,7 @@ impl Matrix{
         for index in 0..result.m.len(){
         
             // так у Т.Рашида: (1/koeff) * errors * signal * (1-signal)
-            result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / (FORMFACTOR * FORMFACTOR);
+            result.m[index] = errors.m[index] * signal.m[index] * (FORMFACTOR - signal.m[index]) / (FORMFACTOR * FORMFACTOR * 4);
 
         }
         result
@@ -279,7 +279,7 @@ impl Sigmoida{
             index = self.len-1
         };
         let res = self.m[index as usize] as Tdata;
-        // Чтобы нейросеть не вырождалась, на концах оставляем дельту ~5
+        // Чтобы нейросеть не вырождалась, на концах оставляем дельту ~5%
         // (см. функцию m1_correctnet)
         if res < TAIL_DOWN{
             TAIL_DOWN as u8
