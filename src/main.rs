@@ -5,25 +5,31 @@ mod matrix;
 // net_01: веса связи входной-скрытый
 // net_12: веса связи скрытый-Выходной
 pub struct Neuronet{
-    //весовые коэффициенты связей Вход - Скрытый слой
+    //весовые коэффициенты связей Вход - Первый скрытый слой
     net_01: matrix::Matrix,
-    //весовые коэффициенты связей Скрытый слой - Выход
+    //весовые коэффициенты связей Первый скрытый слой - Второй скрытый слой
     net_12: matrix::Matrix,
+    //весовые коэффициенты связей Скрытый слой - Выход
+    net_23: matrix::Matrix,
 }
 
 impl Neuronet{
     
-    pub fn new(nnodes0: usize, nnodes1: usize, nnodes2: usize) -> Neuronet{
+    pub fn new(nnodes0: usize, nnodes1: usize, nnodes2: usize, nnodes3: usize) -> Neuronet{
         Neuronet{
             net_01: matrix::Matrix::new_rand(nnodes0, nnodes1, -127, 127, true),
             net_12: matrix::Matrix::new_rand(nnodes1, nnodes2, -127, 127, true),
+            net_23: matrix::Matrix::new_rand(nnodes2, nnodes3, -127, 127, true),
         }
     }
     
     // Значение выходного сигнала для значения входного сигнала
     pub fn getoutput(&self, input: &matrix::Matrix, sigmoida: &matrix::Sigmoida) -> matrix::Matrix {
-        let hidden_output = matrix::Matrix::mul_and_sigmoida(input, &self.net_01, sigmoida); 
-        let output = matrix::Matrix::mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
+    
+        let hidden_output_1 = matrix::Matrix::mul_and_sigmoida(input,               &self.net_01, sigmoida); 
+        let hidden_output_2 = matrix::Matrix::mul_and_sigmoida(&hidden_output_1,    &self.net_12, sigmoida); 
+        let output          = matrix::Matrix::mul_and_sigmoida(&hidden_output_2,    &self.net_23, sigmoida); 
+        
         output
     }
     
@@ -32,8 +38,9 @@ impl Neuronet{
         
         // Получение выходного значения
         
-        let hidden_output = matrix::Matrix::mul_and_sigmoida(input, &self.net_01, sigmoida); 
-        let output = matrix::Matrix::mul_and_sigmoida(&hidden_output, &self.net_12, sigmoida); 
+        let hidden_output_1 = matrix::Matrix::mul_and_sigmoida(input,               &self.net_01, sigmoida); 
+        let hidden_output_2 = matrix::Matrix::mul_and_sigmoida(&hidden_output_1,    &self.net_12, sigmoida); 
+        let output          = matrix::Matrix::mul_and_sigmoida(&hidden_output_2,    &self.net_23, sigmoida); 
         
         // Корректировка весов связей
         
@@ -43,17 +50,21 @@ impl Neuronet{
         }
 
         let output_errors = matrix::Matrix::sub(&target, &output);
-        let hidden_errors = matrix::Matrix::mul(&self.net_12, &output_errors.t())
+        let hidden_errors_2 = matrix::Matrix::mul(&self.net_23, &output_errors.t())
+            .t();
+        let hidden_errors_1 = matrix::Matrix::mul(&self.net_12, &hidden_errors_2.t())
             .t();
         
         let m1 = matrix::Matrix::m1_correctnet(&output_errors, &output);
-        let delta_net_12 = matrix::Matrix::mul(&m1.t(), &hidden_output).t();
+        let delta_net_23 = matrix::Matrix::mul(&m1.t(), &hidden_output_2).t();
+        self.net_23 = matrix::Matrix::add(&self.net_23, &delta_net_23);
         
+        let m1 = matrix::Matrix::m1_correctnet(&hidden_errors_2, &hidden_output_2);
+        let delta_net_12 = matrix::Matrix::mul(&m1.t(), &hidden_output_1).t();
         self.net_12 = matrix::Matrix::add(&self.net_12, &delta_net_12);
         
-        let m1 = matrix::Matrix::m1_correctnet(&hidden_errors, &hidden_output);
+        let m1 = matrix::Matrix::m1_correctnet(&hidden_errors_1, &hidden_output_1);
         let delta_net_01 = matrix::Matrix::mul(&m1.t(), &input).t();
-        
         self.net_01 = matrix::Matrix::add(&self.net_01, &delta_net_01);
         
     }
@@ -64,12 +75,15 @@ impl Neuronet{
 // Научим нейросеть преобразовывать входящий двоичный входящий сигнал в десятичное число!
 fn test_binary_to_decimal() {
 
+    println!("Пример: двоичное преобразование.");
+
     let sigmoida = matrix::Sigmoida::new();
     
     let n_input = 4; // количество входных сигналов
-    let n_output = 10; // количество выходных сигналов
-    let n_hidden = 200; // количество узлов скрытого слоя
-    let mut neuronet = Neuronet::new(n_input, n_hidden, n_output);
+    let n_hidden_1 = 20; // количество узлов скрытого слоя
+    let n_hidden_2 = 100; // количество узлов скрытого слоя
+    let n_output = 10; // количество узлов скрытого слоя
+    let mut neuronet = Neuronet::new(n_input, n_hidden_1, n_hidden_2, n_output);
     
     let mut inputdata_0 = matrix::Matrix::new(1,n_input);
     let mut inputdata_1 = matrix::Matrix::new(1,n_input);
@@ -189,7 +203,7 @@ fn test_binary_to_decimal() {
     need_output_10.set(0,0,max);
     need_output_10.set(0,1,max);
 
-    for _i in 0..20 {
+    for _i in 0..40 {
         neuronet.training(&inputdata_0, &need_output_0, &sigmoida);
         neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
         neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
@@ -203,10 +217,12 @@ fn test_binary_to_decimal() {
         neuronet.training(&inputdata_10, &need_output_10, &sigmoida);
     }
     
-    println!("Матрица весов связей Вход - Скрытый слой:");
-    println!("{}", neuronet.net_01);
-    println!("Матрица весов связей Скрытый слой - Выход:");
-    println!("{}", neuronet.net_12);
+//     println!("Матрица весов связей Вход - Скрытый слой:");
+//     println!("{}", neuronet.net_01);
+//     println!("Матрица весов связей Скрытый слой - Скрытый слой:");
+//     println!("{}", neuronet.net_12);
+//     println!("Матрица весов связей Скрытый слой - Выход:");
+//     println!("{}", neuronet.net_23);
     
     println!("Выходные значения нейросети для различных входов:");
     print!(" 0: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
@@ -226,12 +242,14 @@ fn test_binary_to_decimal() {
 // Попробуем делать разный выход в случае одного набора входов разной интенсивности
 fn test_different_input_levels() {
 
+    println!("Пример: разный выход в случае одного набора входов разной интенсивности");
+
     let sigmoida = matrix::Sigmoida::new();
     
     let n_input = 2; // количество входных сигналов
     let n_output = 3; // количество выходных сигналов
-    let n_hidden = 5; // количество узлов скрытого слоя
-    let mut neuronet = Neuronet::new(n_input, n_hidden, n_output);
+    let n_hidden = 10; // количество узлов скрытого слоя
+    let mut neuronet = Neuronet::new(n_input, n_hidden, n_hidden, n_output);
     
     let mut inputdata_0 = matrix::Matrix::new(1,n_input);
     let mut inputdata_1 = matrix::Matrix::new(1,n_input);
@@ -256,20 +274,22 @@ fn test_different_input_levels() {
         neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
     }
     
-    println!("Матрица весов связей Вход - Скрытый слой:");
-    println!("{}", neuronet.net_01);
-    println!("Матрица весов связей Скрытый слой - Выход:");
-    println!("{}", neuronet.net_12);
+//     println!("Матрица весов связей Вход - Скрытый слой:");
+//     println!("{}", neuronet.net_01);
+//     println!("Матрица весов связей Скрытый слой - Скрытый слой:");
+//     println!("{}", neuronet.net_12);
+//     println!("Матрица весов связей Скрытый слой - Выход:");
+//     println!("{}", neuronet.net_23);
     
     println!("Выходные значения нейросети для различных входов:");
-    print!(" 0: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
-    print!(" 1: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
-    print!(" 2: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
+    print!(" 50: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
+    print!("100: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
+    print!("252: {}", neuronet.getoutput(&inputdata_2, &sigmoida));
 }
 
 fn main() {
     
-//     test_binary_to_decimal();
+    test_binary_to_decimal();
     test_different_input_levels();
     
 }
