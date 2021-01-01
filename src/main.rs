@@ -1,132 +1,43 @@
-mod matrix;
+mod neuronet;
 
-// Нейросеть.
-pub struct Neuronet{
-    //весовые коэффициенты связей слоев
-    net: Vec<matrix::Matrix>
-}
-
-impl Neuronet{
-    
-    // nnodes - вектор количества ячеек в слоях
-    pub fn new(nnodes: &Vec<usize>) -> Neuronet{
-        let mut net = Vec::<matrix::Matrix>::new();
-        for i in 0..nnodes.len()-1 {
-            // весовые коэффициенты связи слоев (i) и (i+1)
-            net.push(matrix::Matrix::new_rand(nnodes[i], nnodes[i+1], -127, 127, true)); 
-        };
-        Neuronet{
-            net: net,
-        }
-    }
-    
-    // Значение выходного сигнала для значения входного сигнала
-    pub fn getoutput(&self, input: &matrix::Matrix, sigmoida: &matrix::Sigmoida) -> matrix::Matrix {
-    
-        let mut next = matrix::Matrix::new(1, 1); // фиктивное значение, чтобы компилятор не ругался на возможно неинициализированную переменную
-        for i in 0..self.net.len() {
-            next = matrix::Matrix::mul_and_sigmoida(
-                match i {
-                    0 => input,
-                    _ => &next,
-                }
-                , &self.net[i], sigmoida
-            ); 
-        }
-        next
-    }
-    
-    // Тренировка
-    fn training(&mut self, input: &matrix::Matrix, target: &matrix::Matrix, sigmoida: &matrix::Sigmoida){
-        
-        // Получение выходных значений на каждом слое
-        
-        // количество матриц в нейросети
-        let n_layers = self.net.len();
-        
-        // максимальный индекс матриц
-        let index_layer_max = n_layers-1; 
-        
-        // выходные сигналы на каждом слое
-        // для 2 скрытых слоев - 3 элемента
-        //let mut outputs = Vec::<&matrix::Matrix>::with_capacity(n_layers); 
-        let mut outputs  = Vec::<matrix::Matrix>::new();
-        
-        for i in 0..self.net.len() {
-            outputs.push( 
-                matrix::Matrix::mul_and_sigmoida(
-                    match i {
-                        0 => input,
-                        _ => &outputs[i-1],
-                    }
-                , &self.net[i], sigmoida)
-            ); 
-        }
-
-        // проверка, что размер выходного сигнала совпадает с размером цели
-        if (outputs[index_layer_max].nrow != target.nrow) || (outputs[index_layer_max].ncol != target.ncol){
-            panic!("Размерности матриц не совпадают {}x{} != {}x{}", 
-                outputs[index_layer_max].nrow, outputs[index_layer_max].ncol, target.nrow, target.ncol);
-        }
-        
-        // Корректировка весов связей нейросети
-        let mut error = matrix::Matrix::new(1, 1); // фиктивное значение, чтобы компилятор не ругался на возможно неинициализированную переменную
-        for i in 0..self.net.len() {
-            let index = self.net.len() - i - 1;
-            error = 
-                match i {
-                    0 => matrix::Matrix::sub(target, &outputs[index_layer_max]),
-                    _ => matrix::Matrix::mul(&self.net[index+1], &error.t()).t(),
-                };
-            let m1 = matrix::Matrix::m1_correctnet(&error, &outputs[index]);
-            let delta = matrix::Matrix::mul(&m1.t(), 
-                match index {
-                    0 => input,
-                    _ => &outputs[index-1],
-                }
-            ).t();
-            self.net[index] = matrix::Matrix::add(&self.net[index], &delta);
-        }
-
-    }
-}
+use neuronet as net;
 
 // Простое двоичное преобразование.
 // Научим нейросеть преобразовывать входящий двоичный входящий сигнал в десятичное число!
 fn test_binary_to_decimal() {
 
     println!("Пример: двоичное преобразование.");
-
-    let sigmoida = matrix::Sigmoida::new();
+    
+    let sigmoida = net::Sigmoida::new();
     
     let n_input = 4; // количество входных сигналов
     let n_output = 10; // количество узлов скрытого слоя
 
-    let mut neuronet = Neuronet::new(&vec![n_input, 20, 100, n_output]);
+    let mut neuronet = net::Neuronet::new(&vec![n_input, 20, 50, n_output]);
     
-    let mut inputdata_0 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_1 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_2 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_3 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_4 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_5 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_6 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_7 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_8 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_9 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_10 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_0 = net::Matrix::new(1,n_input);
+    let mut inputdata_1 = net::Matrix::new(1,n_input);
+    let mut inputdata_2 = net::Matrix::new(1,n_input);
+    let mut inputdata_3 = net::Matrix::new(1,n_input);
+    let mut inputdata_4 = net::Matrix::new(1,n_input);
+    let mut inputdata_5 = net::Matrix::new(1,n_input);
+    let mut inputdata_6 = net::Matrix::new(1,n_input);
+    let mut inputdata_7 = net::Matrix::new(1,n_input);
+    let mut inputdata_8 = net::Matrix::new(1,n_input);
+    let mut inputdata_9 = net::Matrix::new(1,n_input);
+    let mut inputdata_10 = net::Matrix::new(1,n_input);
     
-    let mut need_output_0 = matrix::Matrix::new(1,n_output);
-    let mut need_output_1 = matrix::Matrix::new(1,n_output);
-    let mut need_output_2 = matrix::Matrix::new(1,n_output);
-    let mut need_output_3 = matrix::Matrix::new(1,n_output);
-    let mut need_output_4 = matrix::Matrix::new(1,n_output);
-    let mut need_output_5 = matrix::Matrix::new(1,n_output);
-    let mut need_output_6 = matrix::Matrix::new(1,n_output);
-    let mut need_output_7 = matrix::Matrix::new(1,n_output);
-    let mut need_output_8 = matrix::Matrix::new(1,n_output);
-    let mut need_output_9 = matrix::Matrix::new(1,n_output);
-    let mut need_output_10 = matrix::Matrix::new(1,n_output);
+    let mut need_output_0 = net::Matrix::new(1,n_output);
+    let mut need_output_1 = net::Matrix::new(1,n_output);
+    let mut need_output_2 = net::Matrix::new(1,n_output);
+    let mut need_output_3 = net::Matrix::new(1,n_output);
+    let mut need_output_4 = net::Matrix::new(1,n_output);
+    let mut need_output_5 = net::Matrix::new(1,n_output);
+    let mut need_output_6 = net::Matrix::new(1,n_output);
+    let mut need_output_7 = net::Matrix::new(1,n_output);
+    let mut need_output_8 = net::Matrix::new(1,n_output);
+    let mut need_output_9 = net::Matrix::new(1,n_output);
+    let mut need_output_10 = net::Matrix::new(1,n_output);
     
     let max = 255;
     
@@ -236,13 +147,6 @@ fn test_binary_to_decimal() {
         neuronet.training(&inputdata_10, &need_output_10, &sigmoida);
     }
     
-//     println!("Матрица весов связей Вход - Скрытый слой:");
-//     println!("{}", neuronet.net_01);
-//     println!("Матрица весов связей Скрытый слой - Скрытый слой:");
-//     println!("{}", neuronet.net_12);
-//     println!("Матрица весов связей Скрытый слой - Выход:");
-//     println!("{}", neuronet.net_23);
-    
     println!("Выходные значения нейросети для различных входов:");
     print!(" 0: {}", neuronet.getoutput(&inputdata_0, &sigmoida));
     print!(" 1: {}", neuronet.getoutput(&inputdata_1, &sigmoida));
@@ -263,19 +167,19 @@ fn test_different_input_levels() {
 
     println!("Пример: разный выход в случае одного набора входов разной интенсивности");
 
-    let sigmoida = matrix::Sigmoida::new();
+    let sigmoida = net::Sigmoida::new();
     
     let n_input = 2; // количество входных сигналов
     let n_output = 3; // количество выходных сигналов
-    let mut neuronet = Neuronet::new(&vec![n_input, 10, 30, 15, n_output]);
+    let mut neuronet = net::Neuronet::new(&vec![n_input, 10, 30, 15, n_output]);
     
-    let mut inputdata_0 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_1 = matrix::Matrix::new(1,n_input);
-    let mut inputdata_2 = matrix::Matrix::new(1,n_input);
+    let mut inputdata_0 = net::Matrix::new(1,n_input);
+    let mut inputdata_1 = net::Matrix::new(1,n_input);
+    let mut inputdata_2 = net::Matrix::new(1,n_input);
     
-    let mut need_output_0 = matrix::Matrix::new(1,n_output);
-    let mut need_output_1 = matrix::Matrix::new(1,n_output);
-    let mut need_output_2 = matrix::Matrix::new(1,n_output);
+    let mut need_output_0 = net::Matrix::new(1,n_output);
+    let mut need_output_1 = net::Matrix::new(1,n_output);
+    let mut need_output_2 = net::Matrix::new(1,n_output);
     
     inputdata_0.set(0,0,50);
     need_output_0.set(0,0,252);
@@ -286,7 +190,7 @@ fn test_different_input_levels() {
     inputdata_2.set(0,0,252);
     need_output_2.set(0,2,252);
     
-    for _i in 0..1500 {
+    for _i in 0..500 {
         neuronet.training(&inputdata_0, &need_output_0, &sigmoida);
         neuronet.training(&inputdata_1, &need_output_1, &sigmoida);
         neuronet.training(&inputdata_2, &need_output_2, &sigmoida);
