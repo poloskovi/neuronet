@@ -1,74 +1,94 @@
 mod matrix;
 
 // Нейросеть.
-// слои: входной, скрытый, выходной
-// net_01: веса связи входной-скрытый
-// net_12: веса связи скрытый-Выходной
 pub struct Neuronet{
-    //весовые коэффициенты связей Вход - Первый скрытый слой
-    net_01: matrix::Matrix,
-    //весовые коэффициенты связей Первый скрытый слой - Второй скрытый слой
-    net_12: matrix::Matrix,
-    //весовые коэффициенты связей Скрытый слой - Выход
-    net_23: matrix::Matrix,
+    //весовые коэффициенты связей слоев
+    net: Vec<matrix::Matrix>
 }
 
 impl Neuronet{
     
-    pub fn new(nnodes0: usize, nnodes1: usize, nnodes2: usize, nnodes3: usize) -> Neuronet{
+    // nnodes - вектор количества ячеек в слоях
+    pub fn new(nnodes: &Vec<usize>) -> Neuronet{
+        let mut net = Vec::<matrix::Matrix>::new();
+        for i in 0..nnodes.len()-1 {
+            // весовые коэффициенты связи слоев (i) и (i+1)
+            net.push(matrix::Matrix::new_rand(nnodes[i], nnodes[i+1], -127, 127, true)); 
+        };
         Neuronet{
-            net_01: matrix::Matrix::new_rand(nnodes0, nnodes1, -127, 127, true),
-            net_12: matrix::Matrix::new_rand(nnodes1, nnodes2, -127, 127, true),
-            net_23: matrix::Matrix::new_rand(nnodes2, nnodes3, -127, 127, true),
+            net: net,
         }
     }
     
     // Значение выходного сигнала для значения входного сигнала
     pub fn getoutput(&self, input: &matrix::Matrix, sigmoida: &matrix::Sigmoida) -> matrix::Matrix {
     
-        let hidden_output_1 = matrix::Matrix::mul_and_sigmoida(input,               &self.net_01, sigmoida); 
-        let hidden_output_2 = matrix::Matrix::mul_and_sigmoida(&hidden_output_1,    &self.net_12, sigmoida); 
-        let output          = matrix::Matrix::mul_and_sigmoida(&hidden_output_2,    &self.net_23, sigmoida); 
-        
-        output
+        let mut next = matrix::Matrix::new(1, 1); // фиктивное значение, чтобы компилятор не ругался на возможно неинициализированную переменную
+        for i in 0..self.net.len() {
+            next = matrix::Matrix::mul_and_sigmoida(
+                match i {
+                    0 => input,
+                    _ => &next,
+                }
+                , &self.net[i], sigmoida
+            ); 
+        }
+        next
     }
     
     // Тренировка
     fn training(&mut self, input: &matrix::Matrix, target: &matrix::Matrix, sigmoida: &matrix::Sigmoida){
         
-        // Получение выходного значения
+        // Получение выходных значений на каждом слое
         
-        let hidden_output_1 = matrix::Matrix::mul_and_sigmoida(input,               &self.net_01, sigmoida); 
-        let hidden_output_2 = matrix::Matrix::mul_and_sigmoida(&hidden_output_1,    &self.net_12, sigmoida); 
-        let output          = matrix::Matrix::mul_and_sigmoida(&hidden_output_2,    &self.net_23, sigmoida); 
+        // количество матриц в нейросети
+        let n_layers = self.net.len();
         
-        // Корректировка весов связей
+        // максимальный индекс матриц
+        let index_layer_max = n_layers-1; 
         
-        if (output.nrow != target.nrow) || (output.ncol != target.ncol){
-             panic!("Размерности матриц не совпадают {}x{} != {}x{}", 
-                    output.nrow, output.ncol, target.nrow, target.ncol);
+        // выходные сигналы на каждом слое
+        // для 2 скрытых слоев - 3 элемента
+        //let mut outputs = Vec::<&matrix::Matrix>::with_capacity(n_layers); 
+        let mut outputs  = Vec::<matrix::Matrix>::new();
+        
+        for i in 0..self.net.len() {
+            outputs.push( 
+                matrix::Matrix::mul_and_sigmoida(
+                    match i {
+                        0 => input,
+                        _ => &outputs[i-1],
+                    }
+                , &self.net[i], sigmoida)
+            ); 
         }
 
-        let output_errors = matrix::Matrix::sub(&target, &output);
-        let hidden_errors_2 = matrix::Matrix::mul(&self.net_23, &output_errors.t())
-            .t();
-        let hidden_errors_1 = matrix::Matrix::mul(&self.net_12, &hidden_errors_2.t())
-            .t();
+        // проверка, что размер выходного сигнала совпадает с размером цели
+        if (outputs[index_layer_max].nrow != target.nrow) || (outputs[index_layer_max].ncol != target.ncol){
+            panic!("Размерности матриц не совпадают {}x{} != {}x{}", 
+                outputs[index_layer_max].nrow, outputs[index_layer_max].ncol, target.nrow, target.ncol);
+        }
         
-        let m1 = matrix::Matrix::m1_correctnet(&output_errors, &output);
-        let delta_net_23 = matrix::Matrix::mul(&m1.t(), &hidden_output_2).t();
-        self.net_23 = matrix::Matrix::add(&self.net_23, &delta_net_23);
-        
-        let m1 = matrix::Matrix::m1_correctnet(&hidden_errors_2, &hidden_output_2);
-        let delta_net_12 = matrix::Matrix::mul(&m1.t(), &hidden_output_1).t();
-        self.net_12 = matrix::Matrix::add(&self.net_12, &delta_net_12);
-        
-        let m1 = matrix::Matrix::m1_correctnet(&hidden_errors_1, &hidden_output_1);
-        let delta_net_01 = matrix::Matrix::mul(&m1.t(), &input).t();
-        self.net_01 = matrix::Matrix::add(&self.net_01, &delta_net_01);
-        
+        // Корректировка весов связей нейросети
+        let mut error = matrix::Matrix::new(1, 1); // фиктивное значение, чтобы компилятор не ругался на возможно неинициализированную переменную
+        for i in 0..self.net.len() {
+            let index = self.net.len() - i - 1;
+            error = 
+                match i {
+                    0 => matrix::Matrix::sub(target, &outputs[index_layer_max]),
+                    _ => matrix::Matrix::mul(&self.net[index+1], &error.t()).t(),
+                };
+            let m1 = matrix::Matrix::m1_correctnet(&error, &outputs[index]);
+            let delta = matrix::Matrix::mul(&m1.t(), 
+                match index {
+                    0 => input,
+                    _ => &outputs[index-1],
+                }
+            ).t();
+            self.net[index] = matrix::Matrix::add(&self.net[index], &delta);
+        }
+
     }
-    
 }
 
 // Простое двоичное преобразование.
@@ -80,10 +100,12 @@ fn test_binary_to_decimal() {
     let sigmoida = matrix::Sigmoida::new();
     
     let n_input = 4; // количество входных сигналов
-    let n_hidden_1 = 20; // количество узлов скрытого слоя
-    let n_hidden_2 = 100; // количество узлов скрытого слоя
     let n_output = 10; // количество узлов скрытого слоя
-    let mut neuronet = Neuronet::new(n_input, n_hidden_1, n_hidden_2, n_output);
+//     let n_hidden_1 = 20; // количество узлов скрытого слоя
+//     let n_hidden_2 = 100; // количество узлов скрытого слоя
+
+    let mut neuronet = Neuronet::new(&vec![n_input, 20, 100, n_output]);
+    //let mut neuronet = Neuronet::new(&vec![n_input, 20, n_output]);
     
     let mut inputdata_0 = matrix::Matrix::new(1,n_input);
     let mut inputdata_1 = matrix::Matrix::new(1,n_input);
@@ -248,8 +270,8 @@ fn test_different_input_levels() {
     
     let n_input = 2; // количество входных сигналов
     let n_output = 3; // количество выходных сигналов
-    let n_hidden = 10; // количество узлов скрытого слоя
-    let mut neuronet = Neuronet::new(n_input, n_hidden, n_hidden, n_output);
+    //let n_hidden = 10; // количество узлов скрытого слоя
+    let mut neuronet = Neuronet::new(&vec![n_input, 10, 30, 15, n_output]);
     
     let mut inputdata_0 = matrix::Matrix::new(1,n_input);
     let mut inputdata_1 = matrix::Matrix::new(1,n_input);

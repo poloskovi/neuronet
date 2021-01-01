@@ -26,6 +26,8 @@ impl fmt::Display for Matrix {
     
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         
+//         writeln!(f, "Матрица размера {}x{}", self.nrow, self.ncol)?;
+        
         // для больших матриц вместо части строк и столбцов выводим ...
         let skip_rows_after: usize = 14;
         let skip_columns_after: usize = 9;
@@ -250,9 +252,15 @@ impl Sigmoida{
     pub fn new() -> Sigmoida{
         let mut result = Sigmoida{
             index_zero: 127,
+            // Коэффициент растяжения сигмоиды вдоль оси y. То же самое , что формфактор
             koeff_y: FORMFACTOR as f32,
-            koeff_x: 30.0,//22.0,
+            // Коэффициент растяжения сигмоиды вдоль оси х.
+            // Значение подобрано опытным путем, 
+            // чтобы на концах сигмоида плавно подходила к TAIL_DOWN и TAIL_UP
+            koeff_x: 30.0,
+            // Количество записей в массиве.
             len: FORMFACTOR,
+            // Значения сигмоиды
             m:[0; FORMFACTOR as usize],
         };
         let index_zero_real = result.index_zero as f32;
