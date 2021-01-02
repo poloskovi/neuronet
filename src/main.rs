@@ -13,7 +13,7 @@ fn test_binary_to_decimal() {
     let n_input = 4; // количество входных сигналов
     let n_output = 10; // количество узлов скрытого слоя
 
-    let mut neuronet = net::Neuronet::new(&vec![n_input, 20, 50, n_output]);
+    let mut neuronet = net::Neuronet::new(vec![n_input, 20, 50, n_output]);
     
     let mut inputdata_0 = net::Matrix::new(1,n_input);
     let mut inputdata_1 = net::Matrix::new(1,n_input);
@@ -171,7 +171,7 @@ fn test_different_input_levels() {
     
     let n_input = 2; // количество входных сигналов
     let n_output = 3; // количество выходных сигналов
-    let mut neuronet = net::Neuronet::new(&vec![n_input, 10, 30, 15, n_output]);
+    let mut neuronet = net::Neuronet::new(vec![n_input, 10, 30, 15, n_output]);
     
     let mut inputdata_0 = net::Matrix::new(1,n_input);
     let mut inputdata_1 = net::Matrix::new(1,n_input);

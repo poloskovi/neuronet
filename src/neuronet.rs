@@ -16,12 +16,14 @@ const TAIL_UP: i32 = FORMFACTOR - TAIL_DOWN;
 /// m.set(2, 3, 5);
 /// m.prt();
 /// ```
+#[allow(dead_code)]
 pub struct Matrix{
     m: Vec<Tdata>,
     pub nrow: usize,
     pub ncol: usize,
 }
 
+#[allow(dead_code)]
 impl fmt::Display for Matrix {
     
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -82,6 +84,7 @@ impl fmt::Display for Matrix {
     }
 }
 
+#[allow(dead_code)]
 impl Matrix{
     
     /// Конструктор: Инициализация матрицы и заполнение всех элементов нулем
@@ -94,7 +97,6 @@ impl Matrix{
     }
     
     /// Конструктор: Квадратная единичная матрица
-    #[allow(dead_code)]
     pub fn new_ed(nrowcol: usize) -> Matrix {
         let mut result = Matrix::new(nrowcol, nrowcol);
         for i in 0..nrowcol{
@@ -233,6 +235,10 @@ impl Matrix{
         }
         result
     }
+    
+    pub fn count_of_cells(&self) -> usize {
+        self.nrow * self.ncol
+    }
 
 }
 
@@ -241,6 +247,7 @@ impl Matrix{
 // Сигмоида умножается на коэффициенты матрицы, их значения -2^7..+2^7
 // Результат -2^15..+2^15
 // Это число надо привести к 0..255
+#[allow(dead_code)]
 pub struct Sigmoida{
     index_zero: Tdata,
     koeff_y: f32,
@@ -249,6 +256,7 @@ pub struct Sigmoida{
     m:[u8; FORMFACTOR as usize],
 }
 
+#[allow(dead_code)]
 impl Sigmoida{
     pub fn new() -> Sigmoida{
         let mut result = Sigmoida{
@@ -317,15 +325,17 @@ impl fmt::Display for Sigmoida {
 }
 
 // Нейросеть.
+#[allow(dead_code)]
 pub struct Neuronet{
     //весовые коэффициенты связей слоев
     net: Vec<Matrix>
 }
 
+#[allow(dead_code)]
 impl Neuronet{
     
     // nnodes - вектор количества ячеек в слоях
-    pub fn new(nnodes: &Vec<usize>) -> Neuronet{
+    pub fn new(nnodes: Vec<usize>) -> Neuronet{
         let mut net = Vec::<Matrix>::new();
         for i in 0..nnodes.len()-1 {
             // весовые коэффициенты связи слоев (i) и (i+1)
@@ -354,7 +364,7 @@ impl Neuronet{
     
     // Тренировка
     pub fn training(&mut self, input: &Matrix, target: &Matrix, sigmoida: &Sigmoida){
-        
+    
         // Получение выходных значений на каждом слое
         
         // количество матриц в нейросети
@@ -403,7 +413,15 @@ impl Neuronet{
             ).t();
             self.net[index] = Matrix::add(&self.net[index], &delta);
         }
-
     }
+
+    pub fn count_of_connection(&self) -> usize{
+        let mut result = 0;
+        for matrix in &self.net {
+            result = result + matrix.count_of_cells()
+        }
+        result
+    }
+        
 }
 
