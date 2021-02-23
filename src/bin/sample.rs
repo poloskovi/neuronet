@@ -1,4 +1,4 @@
-mod neuronet;
+extern crate neuronet;
 
 use neuronet as net;
 
