@@ -1,6 +1,7 @@
 extern crate neuronet;
 
 use neuronet as net;
+use matrix::Matrix;
 
 // Простое двоичное преобразование.
 // Научим нейросеть преобразовывать входящий двоичный входящий сигнал в десятичное число!
@@ -15,29 +16,29 @@ fn test_binary_to_decimal() {
 
     let mut neuronet = net::Neuronet::new(vec![n_input, 20, 50, n_output]);
     
-    let mut inputdata_0 = net::Matrix::new(1,n_input);
-    let mut inputdata_1 = net::Matrix::new(1,n_input);
-    let mut inputdata_2 = net::Matrix::new(1,n_input);
-    let mut inputdata_3 = net::Matrix::new(1,n_input);
-    let mut inputdata_4 = net::Matrix::new(1,n_input);
-    let mut inputdata_5 = net::Matrix::new(1,n_input);
-    let mut inputdata_6 = net::Matrix::new(1,n_input);
-    let mut inputdata_7 = net::Matrix::new(1,n_input);
-    let mut inputdata_8 = net::Matrix::new(1,n_input);
-    let mut inputdata_9 = net::Matrix::new(1,n_input);
-    let mut inputdata_10 = net::Matrix::new(1,n_input);
+    let mut inputdata_0 = Matrix::new(1,n_input);
+    let mut inputdata_1 = Matrix::new(1,n_input);
+    let mut inputdata_2 = Matrix::new(1,n_input);
+    let mut inputdata_3 = Matrix::new(1,n_input);
+    let mut inputdata_4 = Matrix::new(1,n_input);
+    let mut inputdata_5 = Matrix::new(1,n_input);
+    let mut inputdata_6 = Matrix::new(1,n_input);
+    let mut inputdata_7 = Matrix::new(1,n_input);
+    let mut inputdata_8 = Matrix::new(1,n_input);
+    let mut inputdata_9 = Matrix::new(1,n_input);
+    let mut inputdata_10 = Matrix::new(1,n_input);
     
-    let mut need_output_0 = net::Matrix::new(1,n_output);
-    let mut need_output_1 = net::Matrix::new(1,n_output);
-    let mut need_output_2 = net::Matrix::new(1,n_output);
-    let mut need_output_3 = net::Matrix::new(1,n_output);
-    let mut need_output_4 = net::Matrix::new(1,n_output);
-    let mut need_output_5 = net::Matrix::new(1,n_output);
-    let mut need_output_6 = net::Matrix::new(1,n_output);
-    let mut need_output_7 = net::Matrix::new(1,n_output);
-    let mut need_output_8 = net::Matrix::new(1,n_output);
-    let mut need_output_9 = net::Matrix::new(1,n_output);
-    let mut need_output_10 = net::Matrix::new(1,n_output);
+    let mut need_output_0 = Matrix::new(1,n_output);
+    let mut need_output_1 = Matrix::new(1,n_output);
+    let mut need_output_2 = Matrix::new(1,n_output);
+    let mut need_output_3 = Matrix::new(1,n_output);
+    let mut need_output_4 = Matrix::new(1,n_output);
+    let mut need_output_5 = Matrix::new(1,n_output);
+    let mut need_output_6 = Matrix::new(1,n_output);
+    let mut need_output_7 = Matrix::new(1,n_output);
+    let mut need_output_8 = Matrix::new(1,n_output);
+    let mut need_output_9 = Matrix::new(1,n_output);
+    let mut need_output_10 = Matrix::new(1,n_output);
     
     let max = 255;
     
@@ -173,13 +174,13 @@ fn test_different_input_levels() {
     let n_output = 3; // количество выходных сигналов
     let mut neuronet = net::Neuronet::new(vec![n_input, 10, 30, 15, n_output]);
     
-    let mut inputdata_0 = net::Matrix::new(1,n_input);
-    let mut inputdata_1 = net::Matrix::new(1,n_input);
-    let mut inputdata_2 = net::Matrix::new(1,n_input);
+    let mut inputdata_0 = Matrix::new(1,n_input);
+    let mut inputdata_1 = Matrix::new(1,n_input);
+    let mut inputdata_2 = Matrix::new(1,n_input);
     
-    let mut need_output_0 = net::Matrix::new(1,n_output);
-    let mut need_output_1 = net::Matrix::new(1,n_output);
-    let mut need_output_2 = net::Matrix::new(1,n_output);
+    let mut need_output_0 = Matrix::new(1,n_output);
+    let mut need_output_1 = Matrix::new(1,n_output);
+    let mut need_output_2 = Matrix::new(1,n_output);
     
     inputdata_0.set(0,0,50);
     need_output_0.set(0,0,252);

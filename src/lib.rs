@@ -5,6 +5,9 @@ extern crate rand;
 use rand::Rng;
 use std::fmt;
 
+extern crate matrix;
+use matrix::Matrix;
+
 /// Тип элементов матриц
 pub type Tdata = i32;
 
@@ -16,90 +19,20 @@ pub const FORMFACTOR: i32 = 256;
 const TAIL_DOWN: i32 = 4;
 const TAIL_UP: i32 = FORMFACTOR - TAIL_DOWN;
 
-/// Матрица типа TData произвольного размера
-/// # Examples
-/// 
-/// let mut m = Matrix::new(2,2);
-/// m.set(0, 1, 5);
-/// println!("{}", m);
-/// 
-pub struct Matrix{
-    m: Vec<Tdata>,
-    pub nrow: usize,
-    pub ncol: usize,
+trait ForMatrix{
+    fn new_ed(nrowcol: usize) -> Matrix<Tdata>;
+    fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> Matrix<Tdata>;
+    fn mul_formfactor(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>) -> Matrix<Tdata>;
+    fn mul_and_sigmoida(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>, sigmoida: &Sigmoida) -> Matrix<Tdata>;
+    fn m1_correctnet(errors: &Matrix<Tdata>, signal: &Matrix<Tdata>) -> Matrix<Tdata>;
+    fn modify(&self, procent: f32) -> Matrix<Tdata>;
+    fn distance(&self, other:&Matrix<Tdata>) -> i32;
 }
 
-impl fmt::Display for Matrix {
-    
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        
-        // для больших матриц вместо части строк и столбцов выводим "..."
-        let skip_rows_after: usize = 14;
-        let skip_columns_after: usize = 9;
-        
-        let skip_rows = self.nrow > skip_rows_after + 1;
-        let skip_columns = self.ncol > skip_columns_after + 1;
-        
-        for row in 0..self.nrow{
-            
-            if skip_rows {
-                if row > skip_rows_after + 1 && row != self.nrow-1 {
-                    continue;
-                }
-            }
-            
-            if self.nrow == 1{
-                write!(f, "⟮ ")?; //U+27EE
-            } else if row == 0 {
-                write!(f, "⎛ ")?; //U+239B
-            } else if row == self.nrow-1 {
-                write!(f, "⎝ ")?;
-            } else {
-                write!(f, "⎜ ")?;
-            }
-            
-            for col in 0..self.ncol{
-                if skip_columns {
-                    if col > skip_columns_after && col != self.ncol-1 {
-                        if col == skip_columns_after + 1 {
-                            write!(f, "{:4} ", " ...")?;
-                        }
-                        continue;
-                    }
-                }
-                if skip_rows && row == skip_rows_after + 1 {
-                    write!(f, "{:4} ", " ...")?;
-                }else{
-                    write!(f, "{:4} ", self.get(row,col))?;
-                }
-            }
-            if self.nrow == 1{
-                writeln!(f, " ⟯")?;
-            } else if row == 0 {
-                writeln!(f, " ⎞")?;
-            } else if row == self.nrow-1 {
-                writeln!(f, " ⎠")?;
-            } else {
-                writeln!(f, " ⎟")?;
-            }
-        }
-        write!(f, "")
-    }
-}
-
-impl Matrix{
-    
-    /// Матрица [nrow] x [ncol], заполненная нулями
-    pub fn new(nrow: usize, ncol: usize) -> Matrix {
-        Matrix {
-            m: vec![0; ncol*nrow],
-            nrow,
-            ncol,
-        }
-    }
+impl ForMatrix for Matrix<Tdata>{
     
     /// Квадратная единичная матрица
-    pub fn new_ed(nrowcol: usize) -> Matrix {
+    fn new_ed(nrowcol: usize) -> Matrix<Tdata> {
         let mut result = Matrix::new(nrowcol, nrowcol);
         for i in 0..nrowcol{
             result.set(i,i,1);
@@ -108,7 +41,7 @@ impl Matrix{
     }
     
     /// Матрица случайных чисел от xmin до xmax
-    pub fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> Matrix {
+    fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> Matrix<Tdata> {
         let mut result = Matrix::new(nrow, ncol);
         
         let mut rng = rand::thread_rng();
@@ -123,54 +56,12 @@ impl Matrix{
         }
         result
     }
-    
-    /// Возвращает значение в ячейке (row,col)
-    pub fn get(&self, row:usize, col:usize) -> Tdata {
-        let index = row * self.ncol + col;
-        self.m[index]
-    }
-    
-    /// Устанавливает значение x в ячейку (row,col)
-    pub fn set(&mut self, row:usize, col:usize, x: Tdata) {
-        let index = row * self.ncol + col;
-        self.m[index] = x;
-    }
-    
-    /// Вычитание
-    pub fn sub(m1: &Matrix, m2: &Matrix) -> Matrix{
-        assert_eq!(m1.nrow, m2.nrow);
-        assert_eq!(m1.ncol, m2.ncol);
-        let mut result = Matrix::new(m1.nrow, m2.ncol);
-        for index in 0..result.m.len(){
-            result.m[index] = m1.m[index] - m2.m[index];
-        }
-        result
-    }
 
-    /// Сложение
-    pub fn add(m1: &Matrix, m2: &Matrix) -> Matrix{
-        assert_eq!(m1.nrow, m2.nrow);
-        assert_eq!(m1.ncol, m2.ncol);
-        let mut result = Matrix::new(m1.nrow, m2.ncol);
-        for index in 0..result.m.len(){
-            result.m[index] = m1.m[index] + m2.m[index];
-        }
-        result
-    }
-
-    /// Возвращает транспонированную матрицу
-    pub fn t(&self) -> Matrix{
-        let mut result = Matrix::new(self.ncol, self.nrow);
-        for row in 0..self.nrow {
-            for col in 0..self.ncol {
-                result.set(col, row, self.get(row,col));
-            }
-        }
-        result
-    }
-    
-    /// Умножение
-    pub fn mul(m1: &Matrix, m2: &Matrix) -> Matrix{
+    /// Умножение с приведением к формфактору
+    /// Если a = FORMFACTOR (то есть 1.0)
+    /// и b = FORMFACTOR (то есть 1.0),
+    /// то a*b = FORMFACTOR (то есть 1.0)
+    fn mul_formfactor(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>) -> Matrix<Tdata>{
         assert_eq!(m1.ncol, m2.nrow);
         let mut result = Matrix::new(m1.nrow, m2.ncol);
         for i in 0..m1.nrow {
@@ -179,53 +70,31 @@ impl Matrix{
                 for r in 0..m1.ncol {
                     cij += m1.get(i,r) * m2.get(r,j);
                 }
-                result.set(i,j,cij);
-            }
-        }
-        result
-    }
-
-    /// Умножение с приведением к формфактору
-    /// Если a = FORMFACTOR (то есть 1.0)
-    /// и b = FORMFACTOR (то есть 1.0),
-    /// то a*b = FORMFACTOR (то есть 1.0)
-    pub fn mul_formfactor(m1: &Matrix, m2: &Matrix) -> Matrix{
-        assert_eq!(m1.ncol, m2.nrow);
-        let mut result = Matrix::new(m1.nrow, m2.ncol);
-        for i in 0..m1.nrow {
-            for j in 0..m2.ncol {
-                let mut cij = 0;
-                for r in 0..m1.ncol {
-                    cij += m1.get(i,r) * m2.get(r,j) / FORMFACTOR;
-                }
-                result.set(i,j,cij);
+                result.set(i,j, 
+                    cij/FORMFACTOR);
             }
         }
         result
     }
 
     /// Умножение матриц с применением к результату сигмоиды 
-    pub fn mul_and_sigmoida(m1: &Matrix, m2: &Matrix, sigmoida: &Sigmoida) -> Matrix{
-    
+    fn mul_and_sigmoida(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>, sigmoida: &Sigmoida) -> Matrix<Tdata>{
         assert_eq!(m1.ncol, m2.nrow);
-    
         let mut result = Matrix::new(m1.nrow, m2.ncol);
         for i in 0..m1.nrow {
             for j in 0..m2.ncol {
                 let mut cij = 0;
                 for r in 0..m1.ncol {
-                    let air = m1.get(i,r);
-                    let brj = m2.get(r,j);
-                    cij += air*brj;
+                    cij += m1.get(i,r) * m2.get(r,j);
                 }
-                let cij_sigm = sigmoida.f_one(cij/FORMFACTOR);
-                result.set(i,j,cij_sigm);
+                result.set(i,j,
+                    sigmoida.f_one(cij/FORMFACTOR));
             }
         }
         result
     }
 
-    pub fn m1_correctnet(errors: &Matrix, signal: &Matrix) -> Matrix {
+    fn m1_correctnet(errors: &Matrix<Tdata>, signal: &Matrix<Tdata>) -> Matrix<Tdata>{
         assert_eq!(errors.nrow, signal.nrow);
         assert_eq!(errors.ncol, signal.ncol);
         let mut result = Matrix::new(errors.nrow, errors.ncol);
@@ -238,22 +107,8 @@ impl Matrix{
         result
     }
     
-    /// Количество ячеек в матрице
-    pub fn count_of_cells(&self) -> usize {
-        self.nrow * self.ncol
-    }
-    
-    /// Преобразует вектор в матрицу [1] x [len]
-    pub fn vec_to_matrix(vector: Vec<Tdata>) -> Matrix{
-        let mut result = Matrix::new(1, vector.len());
-        for (i, value) in vector.iter().enumerate() {
-            result.set(0, i, *value)
-        }
-        result
-    }
-    
     /// слегка измененная матрица
-    pub fn modify(&self, procent: f32) -> Matrix{
+    fn modify(&self, procent: f32) -> Matrix<Tdata>{
         
         let mut result = Matrix::new(self.nrow, self.ncol);
         let mut rng = rand::thread_rng();
@@ -276,17 +131,20 @@ impl Matrix{
         
     }
     
-    /// копия матрицы
-    pub fn copy(&self) -> Matrix {
-        let mut result = Matrix::new(self.nrow, self.ncol);
-        for row in 0..self.nrow{
-            for col in 0..self.ncol{
-                result.set(row, col, self.get(row, col));
+    fn distance(&self, other:&Matrix<Tdata>) -> i32{
+    
+        assert_eq!(self.nrow, other.nrow);
+        assert_eq!(self.ncol, other.ncol);
+        
+        let mut result = 0;
+        for row in 0..self.nrow {
+            for col in 0..self.ncol {
+                let d = self.get(row,col) - other.get(row,col);
+                result += d*d;
             }
         }
         result
     }
-
 }
 
 /// Данные заранее вычисленной сигмоиды.
@@ -358,28 +216,17 @@ impl Sigmoida{
     
 }
 
-impl fmt::Display for Sigmoida {
-    
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for index in 0..self.m.len() {
-            writeln!(f, "{} ", self.m[index])?;
-        }
-        writeln!(f, "")
-    }
-    
-}
-
-// Нейросеть.
+/// Нейросеть.
 pub struct Neuronet{
     //весовые коэффициенты связей слоев
-    net: Vec<Matrix>
+    net: Vec<Matrix<Tdata>>
 }
 
 impl Neuronet{
     
     // nnodes - вектор количества ячеек в слоях
     pub fn new(nnodes: Vec<usize>) -> Neuronet{
-        let mut net = Vec::<Matrix>::new();
+        let mut net = Vec::<Matrix<Tdata>>::new();
         for i in 0..nnodes.len()-1 {
             // весовые коэффициенты связи слоев (i) и (i+1)
             net.push(Matrix::new_rand(nnodes[i], nnodes[i+1], -127, 127, true)); 
@@ -389,10 +236,11 @@ impl Neuronet{
         }
     }
     
-    // Значение выходного сигнала для значения входного сигнала
-    pub fn getoutput(&self, input: &Matrix, sigmoida: &Sigmoida) -> Matrix {
+    /// Значение выходного сигнала нейросети для значения входного сигнала
+    pub fn getoutput(&self, input: &Matrix<Tdata>, sigmoida: &Sigmoida) -> Matrix<Tdata>{
     
-        let mut next = Matrix::new(1, 1); // фиктивное значение, чтобы компилятор не ругался на возможно неинициализированную переменную
+        let mut next = Matrix::new(1, 1);   // фиктивное значение, чтобы компилятор не ругался 
+                                            //на возможно неинициализированную переменную
         for i in 0..self.net.len() {
             next = Matrix::mul_and_sigmoida(
                 match i {
@@ -405,22 +253,14 @@ impl Neuronet{
         next
     }
     
-    // Тренировка
-    pub fn training(&mut self, input: &Matrix, target: &Matrix, sigmoida: &Sigmoida){
+    /// Тренировка нейросети
+    pub fn training(&mut self, input: &Matrix<Tdata>, target: &Matrix<Tdata>, sigmoida: &Sigmoida){
     
+        let n_layers = self.net.len();// количество матриц в нейросети
+        let index_layer_max = n_layers-1; // максимальный индекс матриц
+        
         // Получение выходных значений на каждом слое
-        
-        // количество матриц в нейросети
-        let n_layers = self.net.len();
-        
-        // максимальный индекс матриц
-        let index_layer_max = n_layers-1; 
-        
-        // выходные сигналы на каждом слое
-        // для 2 скрытых слоев - 3 элемента
-        //let mut outputs = Vec::<&matrix::Matrix>::with_capacity(n_layers); 
-        let mut outputs  = Vec::<Matrix>::new();
-        
+        let mut outputs  = Vec::<Matrix<Tdata>>::new();
         for i in 0..self.net.len() {
             outputs.push( 
                 Matrix::mul_and_sigmoida(
@@ -433,13 +273,12 @@ impl Neuronet{
         }
 
         // проверка, что размер выходного сигнала совпадает с размером цели
-        if (outputs[index_layer_max].nrow != target.nrow) || (outputs[index_layer_max].ncol != target.ncol){
-            panic!("Размерности матриц не совпадают {}x{} != {}x{}", 
-                outputs[index_layer_max].nrow, outputs[index_layer_max].ncol, target.nrow, target.ncol);
-        }
+        assert_eq!(outputs[index_layer_max].nrow, target.nrow);
+        assert_eq!(outputs[index_layer_max].ncol, target.ncol);
         
         // Корректировка весов связей нейросети
-        let mut error = Matrix::new(1, 1); // фиктивное значение, чтобы компилятор не ругался на возможно неинициализированную переменную
+        let mut error = Matrix::new(1, 1); // фиктивное значение, чтобы компилятор не ругался
+                                           // на возможно неинициализированную переменную
         for i in 0..self.net.len() {
             let index = self.net.len() - i - 1;
             error = 
@@ -458,23 +297,33 @@ impl Neuronet{
         }
     }
 
+    /// Количество соединений в нейросети (равно количеству ячеек матриц)
     pub fn count_of_connection(&self) -> usize{
         let mut result = 0;
         for matrix in &self.net {
-            result = result + matrix.count_of_cells()
+            result += matrix.count_of_cells()
         }
         result
     }
     
-    // количество входов нейросети
+    /// количество входов нейросети
     pub fn n_inputs(&self) -> usize{
         self.net[0].nrow
     }
         
-    // количество выходов нейросети
+    /// количество выходов нейросети
     pub fn n_outputs(&self) -> usize{
         self.net[self.net.len()-1].ncol
     }
         
+}
+
+impl fmt::Display for Sigmoida {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for index in 0..self.m.len() {
+            writeln!(f, "{} ", self.m[index])?;
+        }
+        writeln!(f, "")
+    }
 }
 
