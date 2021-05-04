@@ -10,6 +10,7 @@ use matrix::Matrix;
 
 /// Тип элементов матриц
 pub type Tdata = i32;
+pub type NeuroMatrix = Matrix<Tdata>;
 
 /// Формфактор: коэффициент перевода значения элемента матрицы.
 /// Если a(i,j) = FORMFACTOR, это значит, что a(i,j) = 1.0
@@ -19,20 +20,20 @@ pub const FORMFACTOR: i32 = 256;
 const TAIL_DOWN: i32 = 4;
 const TAIL_UP: i32 = FORMFACTOR - TAIL_DOWN;
 
-trait ForMatrix{
-    fn new_ed(nrowcol: usize) -> Matrix<Tdata>;
-    fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> Matrix<Tdata>;
-    fn mul_formfactor(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>) -> Matrix<Tdata>;
-    fn mul_and_sigmoida(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>, sigmoida: &Sigmoida) -> Matrix<Tdata>;
-    fn m1_correctnet(errors: &Matrix<Tdata>, signal: &Matrix<Tdata>) -> Matrix<Tdata>;
-    fn modify(&self, procent: f32) -> Matrix<Tdata>;
-    fn distance(&self, other:&Matrix<Tdata>) -> i32;
+pub trait MatrixAdditions{
+    fn new_ed(nrowcol: usize) -> NeuroMatrix;
+    fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> NeuroMatrix;
+    fn mul_formfactor(m1: &NeuroMatrix, m2: &NeuroMatrix) -> NeuroMatrix;
+    fn mul_and_sigmoida(m1: &NeuroMatrix, m2: &NeuroMatrix, sigmoida: &Sigmoida) -> NeuroMatrix;
+    fn m1_correctnet(errors: &NeuroMatrix, signal: &NeuroMatrix) -> NeuroMatrix;
+    fn modify(&self, procent: f32) -> NeuroMatrix;
+    fn distance(&self, other:&NeuroMatrix) -> i32;
 }
 
-impl ForMatrix for Matrix<Tdata>{
+impl MatrixAdditions for NeuroMatrix{
     
     /// Квадратная единичная матрица
-    fn new_ed(nrowcol: usize) -> Matrix<Tdata> {
+    fn new_ed(nrowcol: usize) -> NeuroMatrix {
         let mut result = Matrix::new(nrowcol, nrowcol);
         for i in 0..nrowcol{
             result.set(i,i,1);
@@ -41,7 +42,7 @@ impl ForMatrix for Matrix<Tdata>{
     }
     
     /// Матрица случайных чисел от xmin до xmax
-    fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> Matrix<Tdata> {
+    fn new_rand(nrow: usize, ncol: usize, xmin: Tdata, xmax: Tdata, nonzero: bool) -> NeuroMatrix {
         let mut result = Matrix::new(nrow, ncol);
         
         let mut rng = rand::thread_rng();
@@ -61,7 +62,7 @@ impl ForMatrix for Matrix<Tdata>{
     /// Если a = FORMFACTOR (то есть 1.0)
     /// и b = FORMFACTOR (то есть 1.0),
     /// то a*b = FORMFACTOR (то есть 1.0)
-    fn mul_formfactor(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>) -> Matrix<Tdata>{
+    fn mul_formfactor(m1: &NeuroMatrix, m2: &NeuroMatrix) -> NeuroMatrix{
         assert_eq!(m1.ncol, m2.nrow);
         let mut result = Matrix::new(m1.nrow, m2.ncol);
         for i in 0..m1.nrow {
@@ -78,7 +79,7 @@ impl ForMatrix for Matrix<Tdata>{
     }
 
     /// Умножение матриц с применением к результату сигмоиды 
-    fn mul_and_sigmoida(m1: &Matrix<Tdata>, m2: &Matrix<Tdata>, sigmoida: &Sigmoida) -> Matrix<Tdata>{
+    fn mul_and_sigmoida(m1: &NeuroMatrix, m2: &NeuroMatrix, sigmoida: &Sigmoida) -> NeuroMatrix{
         assert_eq!(m1.ncol, m2.nrow);
         let mut result = Matrix::new(m1.nrow, m2.ncol);
         for i in 0..m1.nrow {
@@ -94,7 +95,7 @@ impl ForMatrix for Matrix<Tdata>{
         result
     }
 
-    fn m1_correctnet(errors: &Matrix<Tdata>, signal: &Matrix<Tdata>) -> Matrix<Tdata>{
+    fn m1_correctnet(errors: &NeuroMatrix, signal: &NeuroMatrix) -> NeuroMatrix{
         assert_eq!(errors.nrow, signal.nrow);
         assert_eq!(errors.ncol, signal.ncol);
         let mut result = Matrix::new(errors.nrow, errors.ncol);
@@ -108,7 +109,7 @@ impl ForMatrix for Matrix<Tdata>{
     }
     
     /// слегка измененная матрица
-    fn modify(&self, procent: f32) -> Matrix<Tdata>{
+    fn modify(&self, procent: f32) -> NeuroMatrix{
         
         let mut result = Matrix::new(self.nrow, self.ncol);
         let mut rng = rand::thread_rng();
@@ -131,7 +132,7 @@ impl ForMatrix for Matrix<Tdata>{
         
     }
     
-    fn distance(&self, other:&Matrix<Tdata>) -> i32{
+    fn distance(&self, other:&NeuroMatrix) -> i32{
     
         assert_eq!(self.nrow, other.nrow);
         assert_eq!(self.ncol, other.ncol);
@@ -219,14 +220,14 @@ impl Sigmoida{
 /// Нейросеть.
 pub struct Neuronet{
     //весовые коэффициенты связей слоев
-    net: Vec<Matrix<Tdata>>
+    net: Vec<NeuroMatrix>
 }
 
 impl Neuronet{
     
     // nnodes - вектор количества ячеек в слоях
     pub fn new(nnodes: Vec<usize>) -> Neuronet{
-        let mut net = Vec::<Matrix<Tdata>>::new();
+        let mut net = Vec::<NeuroMatrix>::new();
         for i in 0..nnodes.len()-1 {
             // весовые коэффициенты связи слоев (i) и (i+1)
             net.push(Matrix::new_rand(nnodes[i], nnodes[i+1], -127, 127, true)); 
@@ -237,7 +238,7 @@ impl Neuronet{
     }
     
     /// Значение выходного сигнала нейросети для значения входного сигнала
-    pub fn getoutput(&self, input: &Matrix<Tdata>, sigmoida: &Sigmoida) -> Matrix<Tdata>{
+    pub fn getoutput(&self, input: &NeuroMatrix, sigmoida: &Sigmoida) -> NeuroMatrix{
     
         let mut next = Matrix::new(1, 1);   // фиктивное значение, чтобы компилятор не ругался 
                                             //на возможно неинициализированную переменную
@@ -254,13 +255,13 @@ impl Neuronet{
     }
     
     /// Тренировка нейросети
-    pub fn training(&mut self, input: &Matrix<Tdata>, target: &Matrix<Tdata>, sigmoida: &Sigmoida){
+    pub fn training(&mut self, input: &NeuroMatrix, target: &NeuroMatrix, sigmoida: &Sigmoida){
     
         let n_layers = self.net.len();// количество матриц в нейросети
         let index_layer_max = n_layers-1; // максимальный индекс матриц
         
         // Получение выходных значений на каждом слое
-        let mut outputs  = Vec::<Matrix<Tdata>>::new();
+        let mut outputs  = Vec::<NeuroMatrix>::new();
         for i in 0..self.net.len() {
             outputs.push( 
                 Matrix::mul_and_sigmoida(
