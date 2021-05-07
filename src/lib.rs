@@ -108,44 +108,6 @@ impl MatrixAdditions for NeuroMatrix{
         result
     }
     
-//    /// слегка измененная матрица
-//    fn modify(&self, procent: f32) -> NeuroMatrix{
-        
-//        let mut result = Matrix::new(self.nrow, self.ncol);
-//        let mut rng = rand::thread_rng();
-        
-//        for i in 0..self.nrow {
-//            for j in 0..self.ncol {
-//                let x = self.get(i,j);
-//                let dx_max = (FORMFACTOR as f32 * procent / 100.0) as Tdata;
-//                let dx = rng.gen_range(-dx_max, dx_max);
-//                let mut x_new = x+dx;
-//                if x_new < 0{
-//                    x_new = 0;
-//                }else if x_new > FORMFACTOR{
-//                    x_new = FORMFACTOR;
-//                }
-//                result.set(i,j, x_new);
-//            }
-//        }
-//        result
-        
-//    }
-    
-//    fn distance(&self, other:&NeuroMatrix) -> i32{
-    
-//        assert_eq!(self.nrow, other.nrow);
-//        assert_eq!(self.ncol, other.ncol);
-        
-//        let mut result = 0;
-//        for row in 0..self.nrow {
-//            for col in 0..self.ncol {
-//                let d = self.get(row,col) - other.get(row,col);
-//                result += d*d;
-//            }
-//        }
-//        result
-//    }
 }
 
 /// Данные заранее вычисленной сигмоиды.
@@ -226,7 +188,7 @@ pub struct Neuronet{
 impl Neuronet{
     
     // nnodes - вектор количества ячеек в слоях
-    pub fn new(nnodes: Vec<usize>) -> Neuronet{
+    pub fn new(nnodes: &Vec<usize>) -> Neuronet{
         let mut net = Vec::<NeuroMatrix>::new();
         for i in 0..nnodes.len()-1 {
             // весовые коэффициенты связи слоев (i) и (i+1)
