@@ -1,6 +1,6 @@
 [package]
 name = "neuronet"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Igor Poloskov <ipoloskov@mail.ru>"]
 edition = "2018"
 
@@ -9,4 +9,5 @@ edition = "2018"
 [dependencies]
 rand = "0.7"
 matrix = { git = "https://github.com/poloskovi/matrix", version = ">=0.1.2"}
+# matrix = { file = "../matrix"}
 
